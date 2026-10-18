@@ -13,13 +13,11 @@ npm install
 cp .env.example .env.local
 ```
 
-Pon tu llave en el campo de la página de inicio, o en `.env.local`:
+Pon tu llave en `.env.local`:
 
 ```bash
 OPENAI_API_KEY=sk-...
 ```
-
-El campo es local: la llave se guarda en `.env.local`, que no se sube, y el servidor no la devuelve. No la pegues en el chat.
 
 ```bash
 npm run dev

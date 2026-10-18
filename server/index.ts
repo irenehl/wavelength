@@ -3,7 +3,6 @@ import { loadEnvConfig } from "@next/env"
 import next from "next"
 import { WebSocketServer, type RawData } from "ws"
 import { normalizeCode } from "../lib/code"
-import { cleanApiKey, isLoopback, saveLocalApiKey } from "./key"
 import { EventHub } from "./rooms"
 import { openTranslation } from "./translate"
 
@@ -12,7 +11,7 @@ loadEnvConfig(process.cwd())
 const port = Number(process.env.PORT || 38471)
 const dev = process.env.NODE_ENV !== "production"
 const hostname = "127.0.0.1"
-let apiKey = process.env.OPENAI_API_KEY?.trim() || ""
+const apiKey = process.env.OPENAI_API_KEY?.trim() || ""
 
 const hub = new EventHub({
   apiKeyConfigured: apiKey.length > 0,
@@ -65,42 +64,6 @@ function toBuffer(data: RawData): Buffer {
 app.prepare().then(() => {
   const server = createServer(async (request, response) => {
     const url = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`)
-
-    if (url.pathname === "/api/key") {
-      if (!isLoopback(request)) {
-        sendJson(response, 403, {
-          code: "key_local",
-          message: "La llave solo se puede guardar desde esta máquina.",
-        })
-        return
-      }
-      if (request.method === "GET") {
-        sendJson(response, 200, { configured: apiKey.length > 0 })
-        return
-      }
-      if (request.method !== "POST") {
-        sendJson(response, 405, { code: "key_failed", message: "No pudimos guardar la llave." })
-        return
-      }
-      try {
-        const key = cleanApiKey(JSON.parse(await readBody(request)).key)
-        if (!key) {
-          sendJson(response, 400, {
-            code: "key_invalid",
-            message: "Esa llave no tiene la forma de una llave de OpenAI.",
-          })
-          return
-        }
-        await saveLocalApiKey(key)
-        apiKey = key
-        process.env.OPENAI_API_KEY = key
-        hub.setApiKeyConfigured(true)
-        sendJson(response, 200, { configured: true })
-      } catch {
-        sendJson(response, 500, { code: "key_failed", message: "No pudimos guardar la llave." })
-      }
-      return
-    }
 
     if (request.method === "POST" && url.pathname === "/api/events") {
       try {

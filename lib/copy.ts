@@ -18,9 +18,6 @@ export const ERROR_CODES = [
   "search_failed",
   "mic_blocked",
   "mic_missing",
-  "key_invalid",
-  "key_local",
-  "key_failed",
 ] as const
 
 export type ErrorCode = (typeof ERROR_CODES)[number]
@@ -51,9 +48,6 @@ const es = {
     search_failed: "No pudimos buscar el evento.",
     mic_blocked: "El navegador bloqueó el micrófono. Permítelo y vuelve a intentar.",
     mic_missing: "No encontramos un micrófono que podamos usar.",
-    key_invalid: "Esa llave no tiene la forma de una llave de OpenAI.",
-    key_local: "La llave solo se puede guardar desde esta máquina.",
-    key_failed: "No pudimos guardar la llave.",
   },
   home: {
     title: "Una voz para toda la sala.",
@@ -70,14 +64,6 @@ const es = {
     joining: "Buscando el evento…",
     join: "Entrar",
     footnote: "Hay una traducción por idioma. Cien personas en inglés cuentan como una.",
-    keyTitle: "Llave de OpenAI",
-    keyHelp: "Se queda en este servidor, en un archivo que no se sube. No la pegues en el chat.",
-    keyPlaceholder: "sk-…",
-    keySave: "Guardar llave",
-    keySaving: "Guardando…",
-    keySaved: "Lista. La traducción ya puede arrancar.",
-    keyConfigured: "Hay una llave guardada en este servidor. Pegar otra la reemplaza.",
-    keyLabel: "Llave",
   },
   speaker: {
     reconnecting: "Reconectando",
@@ -170,9 +156,6 @@ const en: typeof es = {
     search_failed: "We couldn't look up the event.",
     mic_blocked: "The browser blocked the microphone. Allow it and try again.",
     mic_missing: "We couldn't find a microphone we can use.",
-    key_invalid: "That doesn't look like an OpenAI key.",
-    key_local: "The key can only be saved from this machine.",
-    key_failed: "We couldn't save the key.",
   },
   home: {
     title: "One voice for the whole room.",
@@ -189,14 +172,6 @@ const en: typeof es = {
     joining: "Looking for the event…",
     join: "Join",
     footnote: "One translation per language. A hundred people in English count as one.",
-    keyTitle: "OpenAI key",
-    keyHelp: "It stays on this server, in a file that is not uploaded. Don't paste it in the chat.",
-    keyPlaceholder: "sk-…",
-    keySave: "Save key",
-    keySaving: "Saving…",
-    keySaved: "Saved. Translation can start.",
-    keyConfigured: "A key is already saved on this server. Pasting another one replaces it.",
-    keyLabel: "Key",
   },
   speaker: {
     reconnecting: "Reconnecting",
