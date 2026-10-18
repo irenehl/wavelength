@@ -93,7 +93,7 @@ function ListenerLive({
             {errorText(locale, socket.fatal)}
           </p>
         ) : null}
-        {socket.error ? (
+        {socket.error && !(keyReady && socket.error.code === "missing_key") ? (
           <p role="alert" className="rounded-2xl border border-destructive/40 px-4 py-3 text-sm">
             {errorText(locale, socket.error)}
           </p>

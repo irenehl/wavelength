@@ -32,7 +32,7 @@ type LiveSession = {
 export class EventRoom {
   readonly code: string
   readonly name: string
-  readonly apiKeyConfigured: boolean
+  apiKeyConfigured: boolean
   private readonly seats = new Map<string, Seat>()
   private readonly sessions = new Map<string, LiveSession>()
   private readonly failures = new Map<string, number>()
@@ -52,6 +52,12 @@ export class EventRoom {
     this.name = options.name
     this.apiKeyConfigured = options.apiKeyConfigured
     this.openTranslator = options.openTranslator
+  }
+
+  setApiKeyConfigured(configured: boolean) {
+    this.apiKeyConfigured = configured
+    this.syncSessions("user")
+    this.broadcastRoom()
   }
 
   publicSnapshot(): EventPublic {
@@ -337,5 +343,10 @@ export class EventHub {
 
   get(code: string): EventRoom | undefined {
     return this.events.get(normalizeCode(code))
+  }
+
+  setApiKeyConfigured(configured: boolean) {
+    this.options.apiKeyConfigured = configured
+    for (const room of this.events.values()) room.setApiKeyConfigured(configured)
   }
 }

@@ -181,6 +181,11 @@ test("without an API key the room stays open and no session starts", () => {
   assert.equal(room.publicSnapshot().apiKeyConfigured, false)
   const errors = messages(speakerSocket).filter((message) => message.type === "error")
   assert.equal(errors.length, 1)
+
+  room.setApiKeyConfigured(true)
+  assert.equal(room.publicSnapshot().apiKeyConfigured, true)
+  assert.equal(opened.length, 1)
+  assert.equal(opened[0]?.language, "en")
 })
 
 test("a second speaker is refused and changing language moves the listener", () => {

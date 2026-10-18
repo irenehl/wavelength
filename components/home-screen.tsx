@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { KeyForm } from "@/components/key-form";
 import { LocaleSwitch, useCopy } from "@/components/locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -137,6 +138,8 @@ export function HomeScreen() {
           </Button>
         </form>
       </div>
+
+      <KeyForm />
 
       <p className="mt-8 max-w-xl text-sm leading-6 text-muted-foreground">{text.footnote}</p>
     </main>

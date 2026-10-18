@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "NODE_ENV=production tsx server/index.ts",
     "lint": "eslint",
-    "test": "tsx --test server/rooms.test.ts lib/code.test.ts lib/captions.test.ts"
+    "test": "tsx --test server/rooms.test.ts server/key.test.ts lib/code.test.ts lib/captions.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
