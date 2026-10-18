@@ -69,12 +69,12 @@ app.prepare().then(() => {
       try {
         const name = cleanName(JSON.parse(await readBody(request)).name)
         if (!name) {
-          sendJson(response, 400, { message: "Ponle un nombre al evento." })
+          sendJson(response, 400, { code: "name_required", message: "Ponle un nombre al evento." })
           return
         }
         sendJson(response, 201, hub.create(name).publicSnapshot())
       } catch {
-        sendJson(response, 400, { message: "No pudimos crear el evento." })
+        sendJson(response, 400, { code: "create_failed", message: "No pudimos crear el evento." })
       }
       return
     }
@@ -83,7 +83,7 @@ app.prepare().then(() => {
     if (request.method === "GET" && eventMatch) {
       const room = hub.get(decodeURIComponent(eventMatch[1] || ""))
       if (!room) {
-        sendJson(response, 404, { message: "No hay un evento con ese código." })
+        sendJson(response, 404, { code: "event_missing", message: "No hay un evento con ese código." })
         return
       }
       sendJson(response, 200, room.publicSnapshot())
@@ -111,6 +111,7 @@ app.prepare().then(() => {
         JSON.stringify({
           type: "error",
           fatal: true,
+          code: "event_missing",
           message: "No hay un evento con ese código.",
         }),
       )
@@ -139,7 +140,14 @@ app.prepare().then(() => {
           if (message.role !== "speaker" && message.role !== "listener") return
           const result = room.join(socket, message.role)
           if (!result.ok) {
-            socket.send(JSON.stringify({ type: "error", fatal: true, message: result.message }))
+            socket.send(
+              JSON.stringify({
+                type: "error",
+                fatal: true,
+                code: "speaker_taken",
+                message: result.message,
+              }),
+            )
             socket.close()
             return
           }
@@ -154,7 +162,13 @@ app.prepare().then(() => {
         }
       } catch (error) {
         console.error(error)
-        socket.send(JSON.stringify({ type: "error", message: "La sala no pudo completar eso." }))
+        socket.send(
+          JSON.stringify({
+            type: "error",
+            code: "room_failed",
+            message: "La sala no pudo completar eso.",
+          }),
+        )
       }
     })
 

@@ -18,7 +18,7 @@ export function openTranslation(options: {
   onAudio: (pcm: Buffer) => void
   onOutputTranscript: (delta: string, done: boolean, transcript?: string) => void
   onInputTranscript: (delta: string, done: boolean, transcript?: string) => void
-  onError: (message: string) => void
+  onError: (failure: { message: string; code: string }) => void
   onClosed: () => void
 }): Translator {
   let transcribe = options.transcribe
@@ -124,12 +124,15 @@ export function openTranslation(options: {
     }
 
     if (event.type === "error") {
-      options.onError(spanishTranslationError(event))
+      options.onError(translationFailure(event))
     }
   })
 
   socket.on("error", () => {
-    options.onError("No pudimos conectar con la traducción.")
+    options.onError({
+      code: "translation_connect",
+      message: "No pudimos conectar con la traducción.",
+    })
   })
 
   socket.on("close", finish)
@@ -169,12 +172,17 @@ export function openTranslation(options: {
   }
 }
 
-function spanishTranslationError(event: TranslationEvent): string {
+function translationFailure(event: TranslationEvent): { message: string; code: string } {
   const code = event.error?.code || event.error?.type || ""
   const message = event.error?.message || ""
   if (code === "invalid_api_key" || /incorrect api key|invalid api key/i.test(message)) {
-    return "La llave de OpenAI no es válida."
+    return { code: "invalid_key", message: "La llave de OpenAI no es válida." }
   }
-  if (/language/i.test(message)) return "Ese idioma no se puede traducir ahora."
-  return "La traducción falló. Si sigue pasando, revisa la llave y la conexión."
+  if (/language/i.test(message)) {
+    return { code: "language_unsupported", message: "Ese idioma no se puede traducir ahora." }
+  }
+  return {
+    code: "translation_failed",
+    message: "La traducción falló. Si sigue pasando, revisa la llave y la conexión.",
+  }
 }

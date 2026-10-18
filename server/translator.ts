@@ -1,8 +1,13 @@
+export type TranslationFailure = {
+  message: string
+  code: string
+}
+
 export type TranslationHandlers = {
   onAudio: (pcm: Buffer) => void
   onOutputTranscript: (delta: string, done: boolean, transcript?: string) => void
   onInputTranscript: (delta: string, done: boolean, transcript?: string) => void
-  onError: (message: string) => void
+  onError: (failure: TranslationFailure) => void
   onClosed: () => void
 }
 

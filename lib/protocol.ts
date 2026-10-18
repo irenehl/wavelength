@@ -31,4 +31,4 @@ export type ServerMessage =
       reset?: boolean
       transcript?: string
     }
-  | { type: "error"; message: string; fatal?: boolean }
+  | { type: "error"; message: string; code?: string; fatal?: boolean }

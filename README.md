@@ -2,6 +2,8 @@
 
 Interpretación en vivo para un evento. Una persona habla. Quien entra con el código o el QR elige un idioma y escucha, y lee, la misma traducción que el resto de esa sala.
 
+La página se lee en español o en inglés. El control EN/ES está en cada pantalla y recuerda la elección en este navegador.
+
 OpenAI cobra el audio que entra a `gpt-realtime-translate`, unos $0.034 por minuto y por idioma de salida. Cien oyentes en inglés comparten una sola sesión. Al silenciar el micrófono, o cuando se va el último oyente de un idioma, esa sesión se cierra.
 
 ## Correrlo

@@ -1,0 +1,258 @@
+export type UiLocale = "es" | "en"
+
+export const ERROR_CODES = [
+  "name_required",
+  "create_failed",
+  "event_missing",
+  "speaker_taken",
+  "missing_key",
+  "language_unavailable",
+  "translation_stopped",
+  "room_failed",
+  "invalid_key",
+  "language_unsupported",
+  "translation_failed",
+  "translation_connect",
+  "reach_server",
+  "code_format",
+  "search_failed",
+  "mic_blocked",
+  "mic_missing",
+] as const
+
+export type ErrorCode = (typeof ERROR_CODES)[number]
+
+export type RoomNotice = {
+  code?: string
+  message?: string
+}
+
+const es = {
+  switchAria: "Idioma de la página",
+  errors: {
+    name_required: "Ponle un nombre al evento.",
+    create_failed: "No pudimos crear el evento.",
+    event_missing: "No hay un evento con ese código.",
+    speaker_taken: "Ya hay alguien con el micrófono de este evento.",
+    missing_key:
+      "Falta la llave de OpenAI. El evento está abierto, pero la traducción no arranca hasta configurar OPENAI_API_KEY.",
+    language_unavailable: "Ese idioma no está disponible.",
+    translation_stopped: "La traducción se detuvo. Silencia el micrófono y vuelve a abrirlo.",
+    room_failed: "La sala no pudo completar eso.",
+    invalid_key: "La llave de OpenAI no es válida.",
+    language_unsupported: "Ese idioma no se puede traducir ahora.",
+    translation_failed: "La traducción falló. Si sigue pasando, revisa la llave y la conexión.",
+    translation_connect: "No pudimos conectar con la traducción.",
+    reach_server: "No pudimos hablar con el servidor.",
+    code_format: "El código tiene 6 caracteres, como K7M P2Q.",
+    search_failed: "No pudimos buscar el evento.",
+    mic_blocked: "El navegador bloqueó el micrófono. Permítelo y vuelve a intentar.",
+    mic_missing: "No encontramos un micrófono que podamos usar.",
+  },
+  home: {
+    title: "Una voz para toda la sala.",
+    lede: "El speaker habla en su idioma. Quien entra con el código o el QR elige el suyo y escucha la misma traducción que el resto del evento.",
+    openTitle: "Abrir un evento",
+    openHelp: "Sale un código y un QR. Con eso entra quien quiera escuchar.",
+    name: "Nombre",
+    namePlaceholder: "Lanzamiento en Ciudad de México",
+    creating: "Abriendo la sala…",
+    create: "Crear evento",
+    joinTitle: "Entrar a escuchar",
+    joinHelp: "Escribe el código del pase. Si ya tienes el QR, la cámara abre esta misma entrada.",
+    code: "Código",
+    joining: "Buscando el evento…",
+    join: "Entrar",
+    footnote: "Hay una traducción por idioma. Cien personas en inglés cuentan como una.",
+  },
+  speaker: {
+    reconnecting: "Reconectando",
+    micOpen: "Micrófono abierto",
+    muted: "En silencio",
+    arming: "Pidiendo el micrófono…",
+    mute: "Silenciar",
+    openMic: "Abrir micrófono",
+    liveHelp: "La traducción corre solo mientras hay alguien en un idioma. Al silenciar, se cierra.",
+    idleHelp: "Cuando abras el micrófono, el evento escucha en el idioma que haya elegido.",
+    listeners: "Oyentes",
+    nobody: "Nadie ha elegido idioma todavía.",
+    count: (count: number, label: string) =>
+      `${count} ${count === 1 ? "persona" : "personas"} en ${label}`,
+    waiting: (count: number) =>
+      `${count} ${count === 1 ? "persona está" : "personas están"} eligiendo idioma`,
+    heard: "Lo que se entendió",
+    listening: "Escuchando…",
+    heardPending: "El original aparece aquí cuando hables.",
+  },
+  listener: {
+    connecting: "Conectando",
+    closed: "Sala cerrada",
+    reconnecting: "Reconectando",
+    noSpeaker: "Sin speaker",
+    muted: "En silencio",
+    live: "En vivo",
+    ask: "¿En qué idioma lo quieres?",
+    blurb: (label: string) =>
+      `${label} es una sola sala de este evento. Si alguien más lo elige, escuchan contigo.`,
+    listenIn: (label: string) => `Escuchar en ${label}`,
+    stayIn: (label: string) => `Seguir en ${label}`,
+    speakerAway: "El speaker todavía no está en la sala.",
+    speakerMuted: "El speaker está en silencio.",
+    translation: "Traducción",
+    listening: "Escuchando…",
+    translationPending: "La traducción aparece aquí cuando hablen.",
+    original: "Original",
+    originalPending: "El original se lee aquí, más pequeño.",
+    volume: "Volumen",
+    change: "Cambiar idioma",
+    room: (label: string) => `Sala de ${label}`,
+    pickerAria: "Idioma de la sala",
+  },
+  pass: {
+    kicker: "Pase del evento",
+    help: "Un código para todo el evento. El idioma se elige al entrar.",
+    qrAlt: (name: string) => `QR para entrar a ${name}`,
+    copied: "Copiado",
+    copy: "Copiar enlace",
+    project: "Proyectar",
+    scan: "Escanea para escuchar en tu idioma, o entra con el código.",
+    close: "Cerrar pase",
+  },
+  notices: {
+    key: "Falta la llave de OpenAI en el servidor. La sala está abierta, pero la traducción no arranca hasta configurar OPENAI_API_KEY.",
+    missingTitle: "Ese código no corresponde a un evento abierto.",
+    looked: (code: string) => `Buscamos ${code}.`,
+    missingBody:
+      "Los eventos viven mientras este servidor está encendido. Si se reinició, hay que crear el evento de nuevo.",
+    back: "Volver al inicio",
+    loading: "Buscando el evento…",
+    serverTitle: "No pudimos hablar con el servidor.",
+    serverBody: "Recarga la página. Si acabas de abrir Puente, espera un momento y vuelve a intentar.",
+    notFound: "Esta página no está.",
+    crashTitle: "Se cortó la página.",
+    crashBody: "La sala sigue del lado del servidor. Recarga esta vista.",
+    retry: "Reintentar",
+  },
+}
+
+const en: typeof es = {
+  switchAria: "Page language",
+  errors: {
+    name_required: "Give the event a name.",
+    create_failed: "We couldn't create the event.",
+    event_missing: "There's no event with that code.",
+    speaker_taken: "Someone already has the microphone for this event.",
+    missing_key:
+      "The OpenAI key is missing. The event is open, but translation won't start until OPENAI_API_KEY is set.",
+    language_unavailable: "That language isn't available.",
+    translation_stopped: "Translation stopped. Mute the microphone and open it again.",
+    room_failed: "The room couldn't finish that.",
+    invalid_key: "The OpenAI key isn't valid.",
+    language_unsupported: "That language can't be translated right now.",
+    translation_failed: "Translation failed. If it keeps happening, check the key and the connection.",
+    translation_connect: "We couldn't connect to translation.",
+    reach_server: "We couldn't reach the server.",
+    code_format: "The code has 6 characters, like K7M P2Q.",
+    search_failed: "We couldn't look up the event.",
+    mic_blocked: "The browser blocked the microphone. Allow it and try again.",
+    mic_missing: "We couldn't find a microphone we can use.",
+  },
+  home: {
+    title: "One voice for the whole room.",
+    lede: "The speaker talks in their language. Anyone who joins with the code or the QR picks theirs and hears the same translation as the rest of the event.",
+    openTitle: "Open an event",
+    openHelp: "You get a code and a QR. Anyone who wants to listen uses that.",
+    name: "Name",
+    namePlaceholder: "Launch in Mexico City",
+    creating: "Opening the room…",
+    create: "Create event",
+    joinTitle: "Join to listen",
+    joinHelp: "Type the code on the pass. If you have the QR, your camera opens this same page.",
+    code: "Code",
+    joining: "Looking for the event…",
+    join: "Join",
+    footnote: "One translation per language. A hundred people in English count as one.",
+  },
+  speaker: {
+    reconnecting: "Reconnecting",
+    micOpen: "Microphone open",
+    muted: "Muted",
+    arming: "Asking for the microphone…",
+    mute: "Mute",
+    openMic: "Open microphone",
+    liveHelp: "Translation runs only while someone is in a language. Muting closes it.",
+    idleHelp: "When you open the microphone, the event hears whatever language people chose.",
+    listeners: "Listeners",
+    nobody: "Nobody has chosen a language yet.",
+    count: (count: number, label: string) =>
+      `${count} ${count === 1 ? "person" : "people"} in ${label}`,
+    waiting: (count: number) =>
+      count === 1 ? "1 person is choosing a language" : `${count} people are choosing a language`,
+    heard: "What was heard",
+    listening: "Listening…",
+    heardPending: "The original shows up here when you speak.",
+  },
+  listener: {
+    connecting: "Connecting",
+    closed: "Room closed",
+    reconnecting: "Reconnecting",
+    noSpeaker: "No speaker",
+    muted: "Muted",
+    live: "Live",
+    ask: "Which language do you want?",
+    blurb: (label: string) =>
+      `${label} is one room for this event. Anyone else who picks it listens with you.`,
+    listenIn: (label: string) => `Listen in ${label}`,
+    stayIn: (label: string) => `Stay in ${label}`,
+    speakerAway: "The speaker isn't in the room yet.",
+    speakerMuted: "The speaker is muted.",
+    translation: "Translation",
+    listening: "Listening…",
+    translationPending: "The translation shows up here when they speak.",
+    original: "Original",
+    originalPending: "The original is read here, smaller.",
+    volume: "Volume",
+    change: "Change language",
+    room: (label: string) => `${label} room`,
+    pickerAria: "Room language",
+  },
+  pass: {
+    kicker: "Event pass",
+    help: "One code for the whole event. Language is chosen on the way in.",
+    qrAlt: (name: string) => `QR to join ${name}`,
+    copied: "Copied",
+    copy: "Copy link",
+    project: "Project",
+    scan: "Scan to listen in your language, or join with the code.",
+    close: "Close pass",
+  },
+  notices: {
+    key: "The OpenAI key is missing on the server. The room is open, but translation won't start until OPENAI_API_KEY is set.",
+    missingTitle: "That code doesn't match an open event.",
+    looked: (code: string) => `We looked for ${code}.`,
+    missingBody:
+      "Events last while this server is running. If it restarted, create the event again.",
+    back: "Back to the start",
+    loading: "Looking for the event…",
+    serverTitle: "We couldn't reach the server.",
+    serverBody: "Reload the page. If you just opened Puente, wait a moment and try again.",
+    notFound: "This page isn't here.",
+    crashTitle: "The page dropped.",
+    crashBody: "The room is still on the server. Reload this view.",
+    retry: "Try again",
+  },
+}
+
+export function copyFor(locale: UiLocale) {
+  return locale === "en" ? en : es
+}
+
+export function isErrorCode(value: string): value is ErrorCode {
+  return (ERROR_CODES as readonly string[]).includes(value)
+}
+
+export function errorText(locale: UiLocale, notice: RoomNotice | null): string {
+  if (!notice) return ""
+  if (notice.code && isErrorCode(notice.code)) return copyFor(locale).errors[notice.code]
+  return notice.message ?? ""
+}

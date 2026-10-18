@@ -93,6 +93,7 @@ export class EventRoom {
     if (live && !this.apiKeyConfigured) {
       this.send(seat, {
         type: "error",
+        code: "missing_key",
         message:
           "Falta la llave de OpenAI. El evento está abierto, pero la traducción no arranca hasta configurar OPENAI_API_KEY.",
       })
@@ -105,7 +106,11 @@ export class EventRoom {
     const seat = this.seats.get(id)
     if (!seat || seat.role !== "listener") return
     if (!isOutputLanguage(language)) {
-      this.send(seat, { type: "error", message: "Ese idioma no está disponible." })
+      this.send(seat, {
+        type: "error",
+        code: "language_unavailable",
+        message: "Ese idioma no está disponible.",
+      })
       return
     }
     const changed = seat.language !== language || !seat.listening
@@ -204,10 +209,11 @@ export class EventRoom {
           { type: "transcript", side: "source", delta, done, transcript },
         )
       },
-      onError: (message) => {
+      onError: (failure) => {
         this.fanout([this.speaker(), ...this.listenersIn(language)].filter((seat) => seat !== undefined), {
           type: "error",
-          message,
+          code: failure.code,
+          message: failure.message,
         })
       },
       onClosed: () => {
@@ -220,6 +226,7 @@ export class EventRoom {
         if (drops >= MAX_DROPS) {
           this.fanout([this.speaker(), ...this.listenersIn(language)].filter((seat) => seat !== undefined), {
             type: "error",
+            code: "translation_stopped",
             message: "La traducción se detuvo. Silencia el micrófono y vuelve a abrirlo.",
           })
           return

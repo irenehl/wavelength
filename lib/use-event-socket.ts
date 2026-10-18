@@ -3,13 +3,14 @@
 import { useEffect, useRef, useState } from "react"
 import { PcmPlayer } from "@/lib/audio/playback"
 import { emptyCaptions, reduceCaption, type CaptionState } from "@/lib/captions"
+import type { RoomNotice } from "@/lib/copy"
 import type { RoomSnapshot, ServerMessage } from "@/lib/protocol"
 
 export function useEventSocket(code: string, role: "speaker" | "listener", enabled: boolean) {
   const [room, setRoom] = useState<RoomSnapshot | null>(null)
   const [connected, setConnected] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [fatal, setFatal] = useState<string | null>(null)
+  const [error, setError] = useState<RoomNotice | null>(null)
+  const [fatal, setFatal] = useState<RoomNotice | null>(null)
   const [source, setSource] = useState<CaptionState>(emptyCaptions)
   const [translation, setTranslation] = useState<CaptionState>(emptyCaptions)
   const socketRef = useRef<WebSocket | null>(null)
@@ -49,13 +50,14 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
           return
         }
         if (message.type === "error") {
+          const notice = { code: message.code, message: message.message }
           if (message.fatal) {
             stopped = true
-            setFatal(message.message)
+            setFatal(notice)
             ws.close()
             return
           }
-          setError(message.message)
+          setError(notice)
           return
         }
         if (message.type === "transcript") {

@@ -2,24 +2,28 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { LocaleSwitch, useCopy } from "@/components/locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatCode, isValidCode, normalizeCode } from "@/lib/code";
+import { errorText, type RoomNotice } from "@/lib/copy";
 
 export function HomeScreen() {
   const router = useRouter();
+  const { locale, copy } = useCopy();
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
-  const [joinError, setJoinError] = useState<string | null>(null);
+  const [createError, setCreateError] = useState<RoomNotice | null>(null);
+  const [joinError, setJoinError] = useState<RoomNotice | null>(null);
+  const text = copy.home;
 
   async function createEvent(event: FormEvent) {
     event.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) {
-      setCreateError("Ponle un nombre al evento.");
+      setCreateError({ code: "name_required" });
       return;
     }
     setCreating(true);
@@ -32,12 +36,14 @@ export function HomeScreen() {
       });
       const body = (await response.json()) as { code?: string; message?: string };
       if (!response.ok || !body.code) {
-        setCreateError(body.message || "No pudimos crear el evento.");
+        setCreateError(
+          response.ok ? { code: "create_failed" } : { code: body.code, message: body.message },
+        );
         return;
       }
       router.push(`/s/${body.code}`);
     } catch {
-      setCreateError("No pudimos hablar con el servidor.");
+      setCreateError({ code: "reach_server" });
     } finally {
       setCreating(false);
     }
@@ -47,25 +53,25 @@ export function HomeScreen() {
     event.preventDefault();
     const normalized = normalizeCode(code);
     if (!isValidCode(normalized)) {
-      setJoinError("El código tiene 6 caracteres, como K7M P2Q.");
+      setJoinError({ code: "code_format" });
       return;
     }
     setJoining(true);
     setJoinError(null);
     try {
       const response = await fetch(`/api/events/${normalized}`);
-      const body = (await response.json()) as { message?: string };
+      const body = (await response.json()) as { code?: string; message?: string };
       if (response.status === 404) {
-        setJoinError(body.message || "No hay un evento con ese código.");
+        setJoinError({ code: body.code || "event_missing", message: body.message });
         return;
       }
       if (!response.ok) {
-        setJoinError("No pudimos buscar el evento.");
+        setJoinError({ code: "search_failed", message: body.message });
         return;
       }
       router.push(`/l/${normalized}`);
     } catch {
-      setJoinError("No pudimos hablar con el servidor.");
+      setJoinError({ code: "reach_server" });
     } finally {
       setJoining(false);
     }
@@ -73,48 +79,43 @@ export function HomeScreen() {
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-5 py-8 sm:px-8 sm:py-14">
-      <p className="text-sm tracking-[0.22em] text-primary uppercase">Puente</p>
-      <h1 className="font-display mt-6 max-w-3xl text-5xl leading-[0.95] text-balance sm:text-7xl">
-        Una voz para toda la sala.
-      </h1>
-      <p className="mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
-        El speaker habla en su idioma. Quien entra con el código o el QR elige el suyo y escucha la misma traducción que el resto del evento.
-      </p>
+      <div className="flex items-center justify-between gap-4">
+        <p className="text-sm tracking-[0.22em] text-primary uppercase">Puente</p>
+        <LocaleSwitch />
+      </div>
+      <h1 className="font-display mt-6 max-w-3xl text-5xl leading-[0.95] text-balance sm:text-7xl">{text.title}</h1>
+      <p className="mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">{text.lede}</p>
 
       <div className="mt-10 grid gap-4 md:grid-cols-2">
         <form onSubmit={(event) => void createEvent(event)} className="flex flex-col rounded-[2rem] border border-border bg-card/60 p-6 sm:p-8">
-          <h2 className="font-display text-3xl">Abrir un evento</h2>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Sale un código y un QR. Con eso entra quien quiera escuchar.
-          </p>
+          <h2 className="font-display text-3xl">{text.openTitle}</h2>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">{text.openHelp}</p>
           <label className="mt-6 text-sm" htmlFor="event-name">
-            Nombre
+            {text.name}
           </label>
           <Input
             id="event-name"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            placeholder="Lanzamiento en Ciudad de México"
+            placeholder={text.namePlaceholder}
             maxLength={60}
             className="mt-2 h-12 bg-background/40 px-3 text-base"
           />
           {createError ? (
             <p role="alert" className="mt-3 text-sm text-destructive">
-              {createError}
+              {errorText(locale, createError)}
             </p>
           ) : null}
           <Button type="submit" disabled={creating} className="mt-6 h-12 text-base">
-            {creating ? "Abriendo la sala…" : "Crear evento"}
+            {creating ? text.creating : text.create}
           </Button>
         </form>
 
         <form onSubmit={(event) => void joinEvent(event)} className="flex flex-col rounded-[2rem] border border-border bg-card/60 p-6 sm:p-8">
-          <h2 className="font-display text-3xl">Entrar a escuchar</h2>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Escribe el código del pase. Si ya tienes el QR, la cámara abre esta misma entrada.
-          </p>
+          <h2 className="font-display text-3xl">{text.joinTitle}</h2>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">{text.joinHelp}</p>
           <label className="mt-6 text-sm" htmlFor="event-code">
-            Código
+            {text.code}
           </label>
           <Input
             id="event-code"
@@ -128,18 +129,16 @@ export function HomeScreen() {
           />
           {joinError ? (
             <p role="alert" className="mt-3 text-sm text-destructive">
-              {joinError}
+              {errorText(locale, joinError)}
             </p>
           ) : null}
           <Button type="submit" disabled={joining} variant="secondary" className="mt-6 h-12 text-base">
-            {joining ? "Buscando el evento…" : "Entrar"}
+            {joining ? text.joining : text.join}
           </Button>
         </form>
       </div>
 
-      <p className="mt-8 max-w-xl text-sm leading-6 text-muted-foreground">
-        Hay una traducción por idioma. Cien personas en inglés cuentan como una.
-      </p>
+      <p className="mt-8 max-w-xl text-sm leading-6 text-muted-foreground">{text.footnote}</p>
     </main>
   );
 }
