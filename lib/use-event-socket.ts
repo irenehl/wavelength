@@ -1,18 +1,14 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { decodeBase64Pcm } from "@/lib/audio/pcm"
 import { PcmPlayer } from "@/lib/audio/playback"
 import { commitIdle, emptyCaptions, reduceCaption, type CaptionState } from "@/lib/captions"
 import type { RoomNotice } from "@/lib/copy"
 import type { RoomSnapshot, ServerMessage } from "@/lib/protocol"
 import { rememberSeat, storedSeat } from "@/lib/seat-storage"
 
-function decodeAudio(data: string) {
-  const binary = atob(data)
-  const bytes = new Uint8Array(binary.length)
-  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index)
-  return bytes.buffer
-}
+const MAX_IN_FLIGHT = 2
 
 export function useEventSocket(code: string, role: "speaker" | "listener", enabled: boolean, name = "") {
   const [room, setRoom] = useState<RoomSnapshot | null>(null)
@@ -21,12 +17,15 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
   const [fatal, setFatal] = useState<RoomNotice | null>(null)
   const [source, setSource] = useState<CaptionState>(emptyCaptions)
   const [translation, setTranslation] = useState<CaptionState>(emptyCaptions)
+  const [audioReady, setAudioReady] = useState(false)
   const seatRef = useRef<string | null>(null)
   const micRef = useRef(false)
   const languageRef = useRef<string | null>(null)
   const audioRef = useRef<Uint8Array[]>([])
-  const sendingRef = useRef(false)
+  const sendingRef = useRef(0)
   const [player] = useState(() => new PcmPlayer())
+
+  useEffect(() => player.subscribe(setAudioReady), [player])
 
   useEffect(() => {
     if (!enabled) return
@@ -34,7 +33,16 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
     let sourceEvent: EventSource | null = null
     let timer: ReturnType<typeof setTimeout> | undefined
 
+    const playAudio = (encoded: string) => {
+      const pcm = decodeBase64Pcm(encoded)
+      if (pcm) player.push(pcm)
+    }
+
     const apply = (message: ServerMessage) => {
+      if (message.type === "audio") {
+        playAudio(message.audio)
+        return
+      }
       if (message.type === "room") {
         setRoom(message.room)
         return
@@ -66,12 +74,15 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
       if (stopped) return
       const events = new EventSource(`/api/events/${encodeURIComponent(code)}/live?seatId=${encodeURIComponent(seatId)}`)
       sourceEvent = events
-      events.onopen = () => setConnected(true)
+      events.onopen = () => {
+        setConnected(true)
+        if (role === "listener" && player.didUnlock) void player.resume()
+      }
       events.onmessage = (event) => {
         apply(JSON.parse(event.data) as ServerMessage)
       }
       events.addEventListener("audio", (event) => {
-        player.push(decodeAudio((event as MessageEvent<string>).data))
+        playAudio((event as MessageEvent<string>).data)
       })
       events.onerror = () => {
         setConnected(false)
@@ -79,7 +90,7 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
         if (stopped) return
         timer = setTimeout(() => {
           void connect()
-        }, 800)
+        }, 400)
       }
     }
 
@@ -121,7 +132,7 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
         setConnected(false)
         timer = setTimeout(() => {
           void connect()
-        }, 800)
+        }, 400)
       }
     }
 
@@ -143,7 +154,9 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
     }
     const timer = setInterval(beat, 12_000)
     const onVisible = () => {
-      if (document.visibilityState === "visible") beat()
+      if (document.visibilityState !== "visible") return
+      beat()
+      if (role === "listener" && player.didUnlock) void player.resume()
     }
     document.addEventListener("visibilitychange", onVisible)
     return () => {
@@ -151,7 +164,7 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
       document.removeEventListener("visibilitychange", onVisible)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- signal uses refs
-  }, [code, enabled])
+  }, [code, enabled, player, role])
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -175,27 +188,30 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
   }
 
   async function flushAudio() {
-    if (sendingRef.current) return
-    sendingRef.current = true
-    while (audioRef.current.length && seatRef.current) {
-      const chunks = audioRef.current.splice(0, 4)
-      const bytes = new Uint8Array(chunks.reduce((total, chunk) => total + chunk.byteLength, 0))
-      let offset = 0
-      for (const chunk of chunks) {
-        bytes.set(chunk, offset)
-        offset += chunk.byteLength
+    if (sendingRef.current >= MAX_IN_FLIGHT) return
+    sendingRef.current += 1
+    try {
+      while (audioRef.current.length && seatRef.current) {
+        const chunk = audioRef.current.shift()
+        if (!chunk) break
+        try {
+          const body = new Uint8Array(chunk.byteLength)
+          body.set(chunk)
+          await fetch(`/api/events/${encodeURIComponent(code)}/audio`, {
+            method: "POST",
+            headers: { "x-seat-id": seatRef.current },
+            body: body.buffer,
+            cache: "no-store",
+            keepalive: true,
+          })
+        } catch {
+          break
+        }
       }
-      try {
-        await fetch(`/api/events/${encodeURIComponent(code)}/audio`, {
-          method: "POST",
-          headers: { "x-seat-id": seatRef.current },
-          body: bytes,
-        })
-      } catch {
-        break
-      }
+    } finally {
+      sendingRef.current -= 1
+      if (audioRef.current.length && seatRef.current) void flushAudio()
     }
-    sendingRef.current = false
   }
 
   return {
@@ -206,6 +222,7 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
     source,
     translation,
     player,
+    audioReady,
     clearError() {
       setError(null)
     },

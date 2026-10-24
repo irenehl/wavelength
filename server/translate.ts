@@ -46,10 +46,14 @@ export function openTranslation(options: {
         session: {
           audio: {
             input: {
+              format: { type: "audio/pcm", rate: 24000 },
               transcription: transcribe ? { model: "gpt-realtime-whisper" } : null,
               noise_reduction: { type: "near_field" },
             },
-            output: { language: options.language },
+            output: {
+              language: options.language,
+              format: { type: "audio/pcm", rate: 24000 },
+            },
           },
         },
       }),
@@ -76,6 +80,11 @@ export function openTranslation(options: {
   socket.on("open", sendUpdate)
 
   socket.on("message", (data) => {
+    if (Buffer.isBuffer(data) && data.length > 0 && data[0] !== 0x7b) {
+      options.onAudio(data)
+      return
+    }
+
     let event: TranslationEvent
     try {
       event = JSON.parse(data.toString()) as TranslationEvent
@@ -91,8 +100,13 @@ export function openTranslation(options: {
       return
     }
 
-    if (event.type === "session.output_audio.delta" && typeof event.delta === "string") {
-      options.onAudio(Buffer.from(event.delta, "base64"))
+    const audioDelta =
+      (event.type === "session.output_audio.delta" || event.type === "response.output_audio.delta") &&
+      typeof event.delta === "string"
+        ? event.delta
+        : null
+    if (audioDelta) {
+      options.onAudio(Buffer.from(audioDelta, "base64"))
       return
     }
 

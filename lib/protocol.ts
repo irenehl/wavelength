@@ -32,3 +32,4 @@ export type ServerMessage =
       transcript?: string
     }
   | { type: "error"; message: string; code?: string; fatal?: boolean }
+  | { type: "audio"; audio: string }

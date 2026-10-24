@@ -32,9 +32,12 @@ export async function GET(request: Request, context: { params: Promise<{ code: s
           send(`data: ${data}\n\n`)
           return
         }
-        send(`event: audio\ndata: ${Buffer.from(data).toString("base64")}\n\n`)
+        send(`data: ${JSON.stringify({ type: "audio", audio: Buffer.from(data).toString("base64") })}\n\n`)
       })
+      const heartbeat = setInterval(() => send(": keepalive\n\n"), 2000)
+      heartbeat.unref?.()
       request.signal.addEventListener("abort", () => {
+        clearInterval(heartbeat)
         seat.detach(generation)
         try {
           controller.close()

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Captions } from "@/components/captions";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Volume2 } from "lucide-react";
 import { Eyebrow, Lockup } from "@/components/brand";
 import { LanguagePicker } from "@/components/language-picker";
 import { useCopy } from "@/components/locale";
@@ -158,27 +158,44 @@ function ListenerLive({
             />
           </div>
 
-          <div className="mt-8 flex flex-col gap-4 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
-            <label className="flex items-center gap-3 text-sm font-medium text-muted-foreground">
-              {text.volume}
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.01}
-                value={volume}
-                aria-valuetext={`${Math.round(volume * 100)}%`}
-                onChange={(event) => {
-                  const next = Number(event.target.value);
-                  setVolume(next);
-                  socket.player?.setVolume(next);
+          <div className="mt-8 flex flex-col gap-4 border-t border-border pt-6">
+            <p className="text-sm leading-6 text-muted-foreground">{text.hearHint}</p>
+            {!socket.audioReady ? (
+              <Button
+                type="button"
+                className={action}
+                onClick={() => {
+                  void socket.player?.resume();
+                  socket.player?.setVolume(volume);
                 }}
-                className="w-40 accent-primary"
-              />
-            </label>
-            <Button type="button" variant="outline" className={`${action} hover:bg-input/50`} onClick={() => setChoosing(true)}>
-              {text.change}
-            </Button>
+              >
+                <Volume2 />
+                {text.tapToHear}
+              </Button>
+            ) : null}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <label className="flex items-center gap-3 text-sm font-medium text-muted-foreground">
+                {text.volume}
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={volume}
+                  aria-valuetext={`${Math.round(volume * 100)}%`}
+                  onPointerDown={() => void socket.player?.resume()}
+                  onChange={(event) => {
+                    const next = Number(event.target.value);
+                    setVolume(next);
+                    socket.player?.setVolume(next);
+                  }}
+                  className="w-40 accent-primary"
+                />
+              </label>
+              <Button type="button" variant="outline" className={`${action} hover:bg-input/50`} onClick={() => setChoosing(true)}>
+                {text.change}
+              </Button>
+            </div>
           </div>
         </section>
       )}
