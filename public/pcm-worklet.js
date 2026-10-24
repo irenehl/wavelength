@@ -25,7 +25,7 @@ class PcmCaptureProcessor extends AudioWorkletProcessor {
       }
     }
 
-    const frame = 960
+    const frame = 2400
     if (this.pending.length >= frame) {
       const samples = this.pending.splice(0, frame)
       const pcm = new Int16Array(samples.length)

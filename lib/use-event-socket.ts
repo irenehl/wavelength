@@ -3,12 +3,15 @@
 import { useEffect, useRef, useState } from "react"
 import { decodeBase64Pcm } from "@/lib/audio/pcm"
 import { PcmPlayer } from "@/lib/audio/playback"
+import { batchBytes, queueBytes, takeBatch, trimQueue } from "@/lib/audio/upload"
 import { commitIdle, emptyCaptions, reduceCaption, type CaptionState } from "@/lib/captions"
 import type { RoomNotice } from "@/lib/copy"
 import type { RoomSnapshot, ServerMessage } from "@/lib/protocol"
 import { rememberSeat, storedSeat } from "@/lib/seat-storage"
 
-const MAX_IN_FLIGHT = 1
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
 
 export function useEventSocket(code: string, role: "speaker" | "listener", enabled: boolean, name = "") {
   const [room, setRoom] = useState<RoomSnapshot | null>(null)
@@ -22,7 +25,8 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
   const micRef = useRef(false)
   const languageRef = useRef<string | null>(null)
   const audioRef = useRef<Uint8Array[]>([])
-  const sendingRef = useRef(0)
+  const sendingRef = useRef(false)
+  const rttRef = useRef(220)
   const [player] = useState(() => new PcmPlayer())
 
   useEffect(() => player.subscribe(setAudioReady), [player])
@@ -194,28 +198,52 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
   }
 
   async function flushAudio() {
-    if (sendingRef.current >= MAX_IN_FLIGHT) return
-    sendingRef.current += 1
+    if (sendingRef.current) return
+    sendingRef.current = true
     try {
-      while (audioRef.current.length && seatRef.current) {
-        const chunk = audioRef.current.shift()
-        if (!chunk) break
+      while (seatRef.current) {
+        const size = batchBytes(rttRef.current)
+        let lastBytes = queueBytes(audioRef.current)
+        let lastChange = Date.now()
+        while (queueBytes(audioRef.current) < size) {
+          const bytes = queueBytes(audioRef.current)
+          if (bytes !== lastBytes) {
+            lastBytes = bytes
+            lastChange = Date.now()
+          } else if (bytes > 0 && Date.now() - lastChange > 80) {
+            break
+          } else if (bytes === 0 && Date.now() - lastChange > 40) {
+            break
+          }
+          await wait(8)
+        }
+        const batch = takeBatch(audioRef.current, size)
+        if (!batch || batch.byteLength === 0 || !seatRef.current) break
+        const body = new Uint8Array(batch.byteLength)
+        body.set(batch)
+        const sentAt = Date.now()
         try {
-          const body = new Uint8Array(chunk.byteLength)
-          body.set(chunk)
-          await fetch(`/api/events/${encodeURIComponent(code)}/audio`, {
+          const response = await fetch(`/api/events/${encodeURIComponent(code)}/audio`, {
             method: "POST",
             headers: { "x-seat-id": seatRef.current },
             body: body.buffer,
             cache: "no-store",
             keepalive: true,
           })
+          rttRef.current = Date.now() - sentAt
+          if (!response.ok) {
+            audioRef.current.unshift(body)
+            trimQueue(audioRef.current)
+            await wait(200)
+          }
         } catch {
-          break
+          audioRef.current.unshift(body)
+          trimQueue(audioRef.current)
+          await wait(200)
         }
       }
     } finally {
-      sendingRef.current -= 1
+      sendingRef.current = false
       if (audioRef.current.length && seatRef.current) void flushAudio()
     }
   }
@@ -244,6 +272,7 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
     },
     sendAudio(pcm: ArrayBuffer) {
       audioRef.current.push(new Uint8Array(pcm))
+      trimQueue(audioRef.current)
       void flushAudio()
     },
   }

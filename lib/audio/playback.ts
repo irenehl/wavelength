@@ -1,8 +1,8 @@
 import { bytesToInt16, int16ToFloatBuffer, PCM_RATE } from "@/lib/audio/pcm"
 
-const PRIME_S = 0.05
-const MAX_AHEAD_S = 0.32
-const MAX_PENDING = 24
+const PRIME_S = 0.06
+const MAX_AHEAD_S = 0.4
+const MAX_PENDING = 30
 
 const SILENT_WAV =
   "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA="
@@ -19,6 +19,8 @@ function audioContextCtor(): AudioContextCtor | undefined {
 export class PcmPlayer {
   private context: AudioContext | null = null
   private gain: GainNode | null = null
+  private dest: MediaStreamAudioDestinationNode | null = null
+  private element: HTMLAudioElement | null = null
   private nextTime = 0
   private primed = false
   private sources: AudioBufferSourceNode[] = []
@@ -44,7 +46,6 @@ export class PcmPlayer {
   }
 
   async resume() {
-    this.unlockElement()
     const Ctor = audioContextCtor()
     if (!Ctor) return
     if (!this.context) {
@@ -55,13 +56,22 @@ export class PcmPlayer {
       }
       this.gain = this.context.createGain()
       this.gain.gain.value = this.volume
+      this.dest = this.context.createMediaStreamDestination()
+      this.gain.connect(this.dest)
       this.gain.connect(this.context.destination)
+      this.element = this.attachElement(this.dest.stream)
       this.context.addEventListener("statechange", () => {
         if (this.context?.state === "running") this.flushPending()
         this.emitReady()
       })
     }
+    this.unlockElement()
     if (this.context.state !== "running") await this.context.resume()
+    if (this.element) {
+      this.element.muted = false
+      this.element.volume = this.volume
+      await this.element.play().catch(() => {})
+    }
     this.unlocked = this.context.state === "running"
     this.emitReady()
     this.flushPending()
@@ -69,6 +79,7 @@ export class PcmPlayer {
 
   setVolume(volume: number) {
     this.volume = volume
+    if (this.element) this.element.volume = volume
     if (!this.context || !this.gain) return
     this.gain.gain.setTargetAtTime(volume, this.context.currentTime, 0.02)
   }
@@ -100,16 +111,24 @@ export class PcmPlayer {
 
   close() {
     this.reset()
+    if (this.element) {
+      this.element.pause()
+      this.element.srcObject = null
+      this.element.remove()
+      this.element = null
+    }
     void this.context?.close()
     this.context = null
     this.gain = null
+    this.dest = null
     this.unlocked = false
     this.emitReady()
   }
 
   private play(samples: Int16Array) {
     if (!this.context || !this.gain) return
-    const buffer = int16ToFloatBuffer(this.context, samples, PCM_RATE)
+    const copy = new Int16Array(samples)
+    const buffer = int16ToFloatBuffer(this.context, copy, PCM_RATE)
     const source = this.context.createBufferSource()
     source.buffer = buffer
     source.connect(this.gain)
@@ -138,12 +157,30 @@ export class PcmPlayer {
     for (const samples of queued) this.play(samples)
   }
 
+  private attachElement(stream: MediaStream) {
+    const audio = document.createElement("audio")
+    audio.setAttribute("playsinline", "true")
+    audio.setAttribute("webkit-playsinline", "true")
+    audio.autoplay = true
+    audio.preload = "auto"
+    audio.controls = false
+    audio.muted = false
+    audio.volume = this.volume
+    audio.srcObject = stream
+    audio.style.position = "fixed"
+    audio.style.width = "0"
+    audio.style.height = "0"
+    audio.style.opacity = "0"
+    audio.style.pointerEvents = "none"
+    document.body.appendChild(audio)
+    return audio
+  }
+
   private unlockElement() {
+    if (this.element) return
     if (typeof document === "undefined") return
     const audio = document.createElement("audio")
     audio.setAttribute("playsinline", "true")
-    audio.muted = false
-    audio.volume = 0.01
     audio.src = SILENT_WAV
     void audio.play().catch(() => {})
   }
