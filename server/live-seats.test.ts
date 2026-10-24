@@ -61,6 +61,41 @@ test("detach keeps the speaker present so a later reclaim still works", () => {
   assert.equal(event.publicSnapshot().speakerPresent, true)
 })
 
+test("queued captions survive a burst of audio while the stream is down", () => {
+  const event = room()
+  const joined = takeSeat(event, "listener")
+  assert.equal(joined.ok, true)
+  if (!joined.ok) return
+  const seat = liveSeats.get(joined.id)
+  assert.ok(seat)
+  const caption = JSON.stringify({ type: "transcript", side: "translation", delta: "Hello", done: false })
+  seat.send(caption)
+  for (let index = 0; index < 30; index += 1) seat.send(Buffer.from([index]))
+  const seen: Array<string | Buffer> = []
+  seat.attach((data) => seen.push(data))
+  seat.flush()
+  assert.equal(seen.includes(caption), true)
+  assert.equal(seen.filter((item) => typeof item !== "string").length <= 8, true)
+})
+
+test("a closed stream keeps the latest caption for the reconnect", () => {
+  const event = room()
+  const joined = takeSeat(event, "listener")
+  assert.equal(joined.ok, true)
+  if (!joined.ok) return
+  const seat = liveSeats.get(joined.id)
+  assert.ok(seat)
+  seat.attach(() => {
+    throw new Error("closed")
+  })
+  const caption = JSON.stringify({ type: "transcript", side: "translation", delta: "Hello", done: false })
+  seat.send(caption)
+  const seen: Array<string | Buffer> = []
+  seat.attach((data) => seen.push(data))
+  seat.flush()
+  assert.equal(seen.includes(caption), true)
+})
+
 test("an unknown seat id still joins a free speaker chair", () => {
   const event = room()
   const joined = takeSeat(event, "speaker", "missing-seat")

@@ -8,7 +8,8 @@ export class LiveSeat implements RoomSocket {
   readyState = OPEN
   seatId = ""
   private emit: ((data: string | Buffer) => void) | null = null
-  private queue: Array<string | Buffer> = []
+  private textQueue: string[] = []
+  private audioQueue: Buffer[] = []
   private leaveTimer: ReturnType<typeof setTimeout> | undefined
   private generation = 0
 
@@ -23,20 +24,35 @@ export class LiveSeat implements RoomSocket {
 
   send(data: string | Buffer) {
     if (this.emit) {
-      this.emit(data)
+      try {
+        this.emit(data)
+        return
+      } catch {
+        // The stream died. Keep the payload so the next connection can catch up.
+        this.detach()
+      }
+    }
+    if (typeof data === "string") {
+      this.textQueue.push(data)
+      if (this.textQueue.length > 40) this.textQueue.shift()
       return
     }
-    this.queue.push(data)
-    if (this.queue.length > 80) this.queue.shift()
+    this.audioQueue.push(Buffer.from(data))
+    if (this.audioQueue.length > 8) this.audioQueue.shift()
   }
 
   attach(emit: (data: string | Buffer) => void) {
     this.clearLeave()
     this.emit = emit
     this.generation += 1
-    for (const item of this.queue) emit(item)
-    this.queue = []
     return this.generation
+  }
+
+  flush() {
+    const pending: Array<string | Buffer> = [...this.textQueue, ...this.audioQueue]
+    this.textQueue = []
+    this.audioQueue = []
+    for (const item of pending) this.send(item)
   }
 
   detach(generation?: number) {
@@ -66,7 +82,10 @@ export class LiveSeat implements RoomSocket {
   }
 }
 
-export const liveSeats = new Map<string, LiveSeat>()
+const globalForSeats = globalThis as typeof globalThis & { __wavelengthSeats?: Map<string, LiveSeat> }
+
+export const liveSeats = globalForSeats.__wavelengthSeats ?? new Map<string, LiveSeat>()
+globalForSeats.__wavelengthSeats = liveSeats
 
 export function takeSeat(room: EventRoom, role: "speaker" | "listener", seatId?: string) {
   if (seatId) {

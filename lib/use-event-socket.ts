@@ -35,6 +35,7 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
     let stopped = false
     let sourceEvent: EventSource | null = null
     let timer: ReturnType<typeof setTimeout> | undefined
+    let watch: ReturnType<typeof setInterval> | undefined
 
     const playAudio = (encoded: string) => {
       const pcm = decodeBase64Pcm(encoded)
@@ -42,6 +43,7 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
     }
 
     const apply = (message: ServerMessage) => {
+      if (message.type === "ping") return
       if (message.type === "audio") {
         playAudio(message.audio)
         return
@@ -66,6 +68,7 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
           delta: message.delta,
           done: message.done,
           reset: message.reset,
+          snapshot: message.snapshot,
           transcript: message.transcript,
         }
         if (message.side === "source") setSource((prev) => reduceCaption(prev, update))
@@ -75,13 +78,33 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
 
     const openStream = (seatId: string) => {
       if (stopped) return
+      sourceEvent?.close()
+      clearTimeout(timer)
       const events = new EventSource(`/api/events/${encodeURIComponent(code)}/live?seatId=${encodeURIComponent(seatId)}`)
       sourceEvent = events
+      let lastBeat = Date.now()
+      let reconnecting = false
+      const reopen = () => {
+        if (stopped || reconnecting) return
+        reconnecting = true
+        clearInterval(watch)
+        events.close()
+        setConnected(false)
+        timer = setTimeout(() => {
+          if (sourceEvent === events) void connect()
+        }, 500)
+      }
+      clearInterval(watch)
+      watch = setInterval(() => {
+        if (Date.now() - lastBeat > 8000) reopen()
+      }, 2000)
       events.onopen = () => {
+        lastBeat = Date.now()
         setConnected(true)
         if (role === "listener" && player.didUnlock) void player.resume()
       }
       events.onmessage = (event) => {
+        lastBeat = Date.now()
         if (!event.data) return
         try {
           apply(JSON.parse(event.data) as ServerMessage)
@@ -90,16 +113,12 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
         }
       }
       events.addEventListener("audio", (event) => {
+        lastBeat = Date.now()
         playAudio((event as MessageEvent<string>).data)
       })
       events.onerror = () => {
-        setConnected(false)
-        if (stopped) return
         if (events.readyState === EventSource.CONNECTING) return
-        events.close()
-        timer = setTimeout(() => {
-          void connect()
-        }, 800)
+        reopen()
       }
     }
 
@@ -113,6 +132,7 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
           body: JSON.stringify({ role, name, seatId: known || undefined }),
         })
         const body = (await response.json()) as { seatId?: string; code?: string; message?: string }
+        if (stopped) return
         if (!response.ok || !body.seatId) {
           const notice = { code: body.code, message: body.message }
           if (response.status === 409 && known) {
@@ -149,6 +169,7 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
     return () => {
       stopped = true
       clearTimeout(timer)
+      clearInterval(watch)
       sourceEvent?.close()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- signal uses refs

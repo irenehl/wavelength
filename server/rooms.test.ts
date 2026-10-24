@@ -80,6 +80,68 @@ test("listeners in the same language share one translation", () => {
   opened[0]?.handlers.onAudio(translated)
   assert.deepEqual(firstSocket.sent.at(-1), translated)
   assert.deepEqual(secondSocket.sent.at(-1), translated)
+
+  opened[0]?.handlers.onOutputTranscript("Hello.", true, "Hello.")
+  opened[0]?.handlers.onInputTranscript("Hola.", true, "Hola.")
+  const firstText = messages(firstSocket).filter((message) => message.type === "transcript")
+  const secondText = messages(secondSocket).filter((message) => message.type === "transcript")
+  assert.equal(firstText.some((message) => message.type === "transcript" && message.side === "translation" && message.transcript === "Hello."), true)
+  assert.equal(secondText.some((message) => message.type === "transcript" && message.side === "translation" && message.transcript === "Hello."), true)
+  assert.equal(secondText.some((message) => message.type === "transcript" && message.side === "source" && message.transcript === "Hola."), true)
+  const replay = room.captionReplay(second.id).filter((message) => message.type === "transcript")
+  assert.equal(replay.some((message) => message.side === "translation" && message.transcript === "Hello."), true)
+  assert.equal(replay.some((message) => message.side === "source" && message.transcript === "Hola."), true)
+})
+
+test("caption replay keeps earlier utterances for someone who connects late", () => {
+  const { room, opened } = roomWith()
+  const speaker = room.join(fakeSocket(), "speaker")
+  const early = room.join(fakeSocket(), "listener")
+  const late = room.join(fakeSocket(), "listener")
+  if (!speaker.ok || !early.ok || !late.ok) throw new Error("join failed")
+  room.setMic(speaker.id, true)
+  room.listen(early.id, "en")
+  room.listen(late.id, "en")
+  const session = opened[0]
+  session?.handlers.onInputTranscript("Hola.", false)
+  session?.handlers.onInputTranscript("", true, "Hola.")
+  session?.handlers.onInputTranscript(" Otra.", false)
+  session?.handlers.onInputTranscript("", true, "Otra.")
+  session?.handlers.onOutputTranscript("Hello.", false)
+  session?.handlers.onOutputTranscript("", true, "Hello.")
+  session?.handlers.onOutputTranscript(" More.", false)
+  session?.handlers.onOutputTranscript("", true, "More.")
+
+  const replay = room.captionReplay(late.id).filter((message) => message.type === "transcript")
+  const source = replay.find((message) => message.type === "transcript" && message.side === "source")
+  const translation = replay.find((message) => message.type === "transcript" && message.side === "translation")
+  assert.equal(source?.type === "transcript" && source.transcript, "Hola. Otra.")
+  assert.equal(translation?.type === "transcript" && translation.transcript, "Hello. More.")
+  assert.equal(translation?.type === "transcript" && translation.snapshot, true)
+})
+
+test("one blocked listener does not stop the other", () => {
+  const { room, opened } = roomWith()
+  const speaker = room.join(fakeSocket(), "speaker")
+  const blocked = room.join({
+    readyState: 1,
+    send() {
+      throw new Error("blocked")
+    },
+  }, "listener")
+  const healthySocket = fakeSocket()
+  const healthy = room.join(healthySocket, "listener")
+  if (!speaker.ok || !blocked.ok || !healthy.ok) throw new Error("join failed")
+  room.setMic(speaker.id, true)
+  room.listen(blocked.id, "en")
+  room.listen(healthy.id, "en")
+  opened[0]?.handlers.onOutputTranscript("Hello.", true, "Hello.")
+  opened[0]?.handlers.onAudio(Buffer.from([1, 2]))
+  const text = messages(healthySocket).filter(
+    (message) => message.type === "transcript" && message.side === "translation" && message.transcript === "Hello.",
+  )
+  assert.equal(text.length, 1)
+  assert.deepEqual(healthySocket.sent.at(-1), Buffer.from([1, 2]))
 })
 
 test("a second language opens its own session and keeps the first transcriber", () => {

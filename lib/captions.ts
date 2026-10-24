@@ -39,9 +39,15 @@ export function commitIdle(prev: CaptionState, now = Date.now()): CaptionState {
 
 export function reduceCaption(
   prev: CaptionState,
-  update: { delta?: string; done?: boolean; reset?: boolean; transcript?: string },
+  update: { delta?: string; done?: boolean; reset?: boolean; snapshot?: boolean; transcript?: string },
   now = Date.now(),
 ): CaptionState {
+  if (update.snapshot) {
+    const text = (update.transcript || "").replace(/\s+/g, " ").trim()
+    const shown = [...prev.lines, prev.current].join(" ").replace(/\s+/g, " ").trim()
+    if (!text || text.length <= shown.length) return prev
+    return { current: "", lines: commit([], text), updatedAt: now }
+  }
   if (update.reset) return emptyCaptions
   if (update.done) {
     return { current: "", lines: commit(prev.lines, update.transcript || prev.current), updatedAt: now }

@@ -28,6 +28,14 @@ test("sentence breaks become their own lines", () => {
   assert.deepEqual(done.lines, ["One.", "Two more."])
 })
 
+test("a snapshot fills a listener who missed the live lines", () => {
+  const caughtUp = reduceCaption(emptyCaptions, { snapshot: true, transcript: "One. Two more." })
+  assert.deepEqual(caughtUp.lines, ["One.", "Two more."])
+  const longer = reduceCaption(caughtUp, { snapshot: true, transcript: "One. Two more. Three." })
+  assert.deepEqual(longer.lines, ["One.", "Two more.", "Three."])
+  assert.equal(reduceCaption(longer, { snapshot: true, transcript: "One." }), longer)
+})
+
 test("silence after a pause commits the open line", () => {
   const open = reduceCaption(emptyCaptions, { delta: "That's it." }, 1_000)
   const idle = commitIdle(open, 2_200)

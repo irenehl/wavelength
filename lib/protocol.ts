@@ -29,7 +29,9 @@ export type ServerMessage =
       delta: string
       done: boolean
       reset?: boolean
+      snapshot?: boolean
       transcript?: string
     }
   | { type: "error"; message: string; code?: string; fatal?: boolean }
   | { type: "audio"; audio: string }
+  | { type: "ping" }

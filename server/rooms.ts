@@ -41,6 +41,8 @@ export class EventRoom {
   private transcriber: string | null = null
   private preroll: Buffer[] = []
   private prerollBytes = 0
+  private sourceCaption = ""
+  private translationCaptions = new Map<string, string>()
 
   constructor(options: {
     code: string
@@ -124,9 +126,40 @@ export class EventRoom {
         done: false,
         reset: true,
       })
+      for (const message of this.captionReplay(id)) this.send(seat, message)
     }
     this.syncSessions("user")
     this.broadcastRoom()
+  }
+
+  captionReplay(id: string): ServerMessage[] {
+    const seat = this.seats.get(id)
+    if (!seat) return []
+    const messages: ServerMessage[] = []
+    if (this.sourceCaption && (seat.role === "speaker" || seat.listening)) {
+      messages.push({
+        type: "transcript",
+        side: "source",
+        delta: "",
+        done: true,
+        snapshot: true,
+        transcript: this.sourceCaption,
+      })
+    }
+    if (seat.role === "listener" && seat.listening && seat.language) {
+      const translation = this.translationCaptions.get(seat.language)
+      if (translation) {
+        messages.push({
+          type: "transcript",
+          side: "translation",
+          delta: "",
+          done: true,
+          snapshot: true,
+          transcript: translation,
+        })
+      }
+    }
+    return messages
   }
 
   leave(id: string) {
@@ -194,6 +227,10 @@ export class EventRoom {
     const handlers: TranslationHandlers = {
       onAudio: (pcm) => this.fanoutAudio(language, pcm),
       onOutputTranscript: (delta, done, transcript) => {
+        this.translationCaptions.set(
+          language,
+          this.noteCaption(this.translationCaptions.get(language) || "", delta, done, transcript),
+        )
         this.fanout(this.listenersIn(language), {
           type: "transcript",
           side: "translation",
@@ -204,6 +241,7 @@ export class EventRoom {
       },
       onInputTranscript: (delta, done, transcript) => {
         if (this.transcriber !== language) return
+        this.sourceCaption = this.noteCaption(this.sourceCaption, delta, done, transcript)
         this.fanout(
           [...this.seats.values()].filter((seat) => seat.role === "speaker" || seat.listening),
           { type: "transcript", side: "source", delta, done, transcript },
@@ -281,9 +319,25 @@ export class EventRoom {
       .map(([language, count]) => ({ language, count }))
   }
 
+  private noteCaption(current: string, delta: string, done: boolean, transcript?: string) {
+    const limit = (value: string) => (value.length > 4000 ? value.slice(-4000) : value)
+    if (!done) return limit(current + delta)
+    const base = current.replace(/\s+/g, " ").trim()
+    const finished = (transcript || "").replace(/\s+/g, " ").trim()
+    if (!finished) return limit(base)
+    if (!base || finished.startsWith(base)) return limit(finished)
+    if (base.endsWith(finished)) return limit(base)
+    return limit(`${base} ${finished}`)
+  }
+
   private fanoutAudio(language: string, pcm: Buffer) {
     for (const seat of this.listenersIn(language)) {
-      if (seat.socket.readyState === OPEN) seat.socket.send(pcm)
+      if (seat.socket.readyState !== OPEN) continue
+      try {
+        seat.socket.send(pcm)
+      } catch {
+        // one listener cannot stop the others
+      }
     }
   }
 
@@ -308,7 +362,11 @@ export class EventRoom {
 
   private send(seat: Seat, message: ServerMessage) {
     if (seat.socket.readyState !== OPEN) return
-    seat.socket.send(JSON.stringify(message))
+    try {
+      seat.socket.send(JSON.stringify(message))
+    } catch {
+      // one listener cannot stop the others
+    }
   }
 }
 
