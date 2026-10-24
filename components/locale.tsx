@@ -63,16 +63,16 @@ export function useCopy() {
   return { locale: value.locale, setLocale: value.setLocale, copy: copyFor(value.locale) };
 }
 
-export function LocaleSwitch({ tone = "ink" }: { tone?: "ink" | "paper" }) {
+export function LocaleSwitch({ tone = "light" }: { tone?: "light" | "ink" }) {
   const { locale, setLocale, copy } = useCopy();
-  const paper = tone === "paper";
+  const ink = tone === "ink";
 
   return (
     <div
       role="group"
       aria-label={copy.switchAria}
-      className={`inline-flex rounded-full border p-0.5 text-xs ${
-        paper ? "border-[#1c1712]/25" : "border-border"
+      className={`inline-flex rounded-full border p-0.5 text-xs font-semibold ${
+        ink ? "border-white/12 bg-white/5" : "border-white/12 bg-ink/90"
       }`}
     >
       {(["es", "en"] as const).map((item) => {
@@ -83,14 +83,8 @@ export function LocaleSwitch({ tone = "ink" }: { tone?: "ink" | "paper" }) {
             type="button"
             aria-pressed={active}
             onClick={() => setLocale(item)}
-            className={`rounded-full px-2.5 py-1 tracking-wide uppercase ${
-              active
-                ? paper
-                  ? "bg-[#1c1712] text-[#f3ecdf]"
-                  : "bg-primary text-primary-foreground"
-                : paper
-                  ? "text-[#1c1712]/70"
-                  : "text-muted-foreground"
+            className={`rounded-full px-2.5 py-1 tracking-wider uppercase transition-colors ${
+              active ? "bg-primary text-primary-foreground" : "text-on-ink/70 hover:text-on-ink"
             }`}
           >
             {item}

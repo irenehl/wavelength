@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Mic, MicOff } from "lucide-react";
 import { Captions } from "@/components/captions";
+import { BrandMark, Eyebrow } from "@/components/brand";
 import { EventPass } from "@/components/event-pass";
 import { LocaleSwitch, useCopy } from "@/components/locale";
 import { KeyBanner, LoadingEvent, MissingEvent, ServerError } from "@/components/notices";
@@ -75,16 +76,19 @@ function SpeakerLive({
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-5 sm:px-6 sm:py-8">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-xs tracking-[0.18em] text-primary uppercase">Puente</p>
-          <h1 className="font-display text-3xl leading-tight sm:text-4xl">{name}</h1>
+      <header className="flex flex-col gap-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <BrandMark />
+          <div className="flex items-center gap-2">
+            <StatusPill tone={live ? "live" : socket.connected ? "wait" : "off"}>
+              {!socket.connected ? text.reconnecting : live ? text.micOpen : text.muted}
+            </StatusPill>
+            <LocaleSwitch />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <LocaleSwitch />
-          <StatusPill tone={live ? "live" : socket.connected ? "wait" : "off"}>
-            {!socket.connected ? text.reconnecting : live ? text.micOpen : text.muted}
-          </StatusPill>
+        <div>
+          <Eyebrow>{text.kicker}</Eyebrow>
+          <h1 className="font-display mt-1 text-3xl leading-tight sm:text-4xl">{name}</h1>
         </div>
       </header>
 
@@ -104,7 +108,7 @@ function SpeakerLive({
         <EventPass code={code} name={name} />
 
         <div className="flex flex-col gap-6">
-          <section className="rounded-[2rem] border border-border bg-card/50 px-6 py-8">
+          <section className="rounded-2xl border border-border bg-card px-6 py-8">
             <div className="flex flex-col items-center">
               <button
                 type="button"
@@ -112,7 +116,7 @@ function SpeakerLive({
                 disabled={arming || Boolean(socket.fatal)}
                 aria-pressed={live}
                 aria-label={live ? text.mute : text.openMic}
-                className="relative grid size-32 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-60"
+                className="relative grid size-32 place-items-center rounded-full bg-primary text-primary-foreground shadow-[0_10px_40px_-10px_var(--brand-purple)] transition-colors hover:bg-[var(--brand-purple-soft)] disabled:opacity-60"
               >
                 <span
                   className="absolute inset-0 rounded-full border border-primary"
@@ -120,7 +124,7 @@ function SpeakerLive({
                 />
                 {live ? <MicOff className="size-8" /> : <Mic className="size-8" />}
               </button>
-              <p className="mt-5 text-lg">{arming ? text.arming : live ? text.mute : text.openMic}</p>
+              <p className="font-display mt-5 text-xl">{arming ? text.arming : live ? text.mute : text.openMic}</p>
               <p className="mt-2 max-w-sm text-center text-sm leading-6 text-muted-foreground">
                 {live ? text.liveHelp : text.idleHelp}
               </p>
@@ -132,8 +136,8 @@ function SpeakerLive({
             </div>
           </section>
 
-          <section className="rounded-[2rem] border border-border px-6 py-5">
-            <h2 className="text-sm tracking-[0.16em] text-muted-foreground uppercase">{text.listeners}</h2>
+          <section className="rounded-2xl border border-border bg-card px-6 py-5">
+            <Eyebrow>{text.listeners}</Eyebrow>
             {counts.length === 0 && waiting === 0 ? (
               <p className="mt-3 text-lg">{text.nobody}</p>
             ) : (
@@ -146,7 +150,7 @@ function SpeakerLive({
             )}
           </section>
 
-          <section className="rounded-[2rem] border border-border px-6 py-5">
+          <section className="rounded-2xl border border-border bg-card px-6 py-5">
             <Captions
               eyebrow={text.heard}
               current={socket.source.current}

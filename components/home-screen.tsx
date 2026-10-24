@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { BrandBar, Eyebrow } from "@/components/brand";
 import { LocaleSwitch, useCopy } from "@/components/locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,18 +80,20 @@ export function HomeScreen() {
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-5 py-8 sm:px-8 sm:py-14">
-      <div className="flex items-center justify-between gap-4">
-        <p className="text-sm tracking-[0.22em] text-primary uppercase">Puente</p>
+      <BrandBar>
         <LocaleSwitch />
-      </div>
-      <h1 className="font-display mt-6 max-w-3xl text-5xl leading-[0.95] text-balance sm:text-7xl">{text.title}</h1>
-      <p className="mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">{text.lede}</p>
+      </BrandBar>
+      <Eyebrow className="mt-12 sm:mt-16">{text.eyebrow}</Eyebrow>
+      <h1 className="font-display mt-4 max-w-3xl text-5xl leading-[1.02] text-balance sm:text-7xl">
+        {text.title} <span className="text-muted-foreground">{text.titleTail}</span>
+      </h1>
+      <p className="mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">{text.lede}</p>
 
       <div className="mt-10 grid gap-4 md:grid-cols-2">
-        <form onSubmit={(event) => void createEvent(event)} className="flex flex-col rounded-[2rem] border border-border bg-card/60 p-6 sm:p-8">
-          <h2 className="font-display text-3xl">{text.openTitle}</h2>
+        <form onSubmit={(event) => void createEvent(event)} className="flex flex-col rounded-2xl border border-border bg-card p-6 shadow-[0_1px_0_rgba(26,26,26,0.03)] sm:p-8">
+          <h2 className="font-display text-2xl sm:text-3xl">{text.openTitle}</h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">{text.openHelp}</p>
-          <label className="mt-6 text-sm" htmlFor="event-name">
+          <label className="mt-6 text-sm font-medium" htmlFor="event-name">
             {text.name}
           </label>
           <Input
@@ -99,22 +102,22 @@ export function HomeScreen() {
             onChange={(event) => setName(event.target.value)}
             placeholder={text.namePlaceholder}
             maxLength={60}
-            className="mt-2 h-12 bg-background/40 px-3 text-base"
+            className="mt-2 h-12 bg-background px-3 text-base"
           />
           {createError ? (
             <p role="alert" className="mt-3 text-sm text-destructive">
               {errorText(locale, createError)}
             </p>
           ) : null}
-          <Button type="submit" disabled={creating} className="mt-6 h-12 text-base">
+          <Button type="submit" disabled={creating} className="mt-6 h-12 px-6 text-base">
             {creating ? text.creating : text.create}
           </Button>
         </form>
 
-        <form onSubmit={(event) => void joinEvent(event)} className="flex flex-col rounded-[2rem] border border-border bg-card/60 p-6 sm:p-8">
-          <h2 className="font-display text-3xl">{text.joinTitle}</h2>
+        <form onSubmit={(event) => void joinEvent(event)} className="flex flex-col rounded-2xl border border-border bg-card p-6 shadow-[0_1px_0_rgba(26,26,26,0.03)] sm:p-8">
+          <h2 className="font-display text-2xl sm:text-3xl">{text.joinTitle}</h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">{text.joinHelp}</p>
-          <label className="mt-6 text-sm" htmlFor="event-code">
+          <label className="mt-6 text-sm font-medium" htmlFor="event-code">
             {text.code}
           </label>
           <Input
@@ -125,14 +128,14 @@ export function HomeScreen() {
             autoCapitalize="characters"
             autoCorrect="off"
             spellCheck={false}
-            className="font-display mt-2 h-14 bg-background/40 px-3 text-2xl tracking-[0.14em]"
+            className="font-display mt-2 h-14 bg-background px-3 text-2xl tracking-[0.14em]"
           />
           {joinError ? (
             <p role="alert" className="mt-3 text-sm text-destructive">
               {errorText(locale, joinError)}
             </p>
           ) : null}
-          <Button type="submit" disabled={joining} variant="secondary" className="mt-6 h-12 text-base">
+          <Button type="submit" disabled={joining} variant="outline" className="mt-6 h-12 border-foreground/80 px-6 text-base hover:bg-foreground hover:text-background">
             {joining ? text.joining : text.join}
           </Button>
         </form>

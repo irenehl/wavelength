@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Captions } from "@/components/captions";
+import { BrandMark, Eyebrow } from "@/components/brand";
 import { LanguagePicker } from "@/components/language-picker";
 import { LocaleSwitch, useCopy } from "@/components/locale";
 import { KeyBanner, LoadingEvent, MissingEvent, ServerError } from "@/components/notices";
@@ -71,18 +72,21 @@ function ListenerLive({
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-3xl flex-1 flex-col px-5 py-5 sm:px-8 sm:py-8">
-      <header className="flex flex-wrap items-start justify-between gap-4">
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-5 py-5 sm:px-8 sm:py-8">
+      <header className="flex flex-col gap-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <BrandMark />
+          <div className="flex items-center gap-2">
+            <StatusPill tone={tone}>{status}</StatusPill>
+            <LocaleSwitch />
+          </div>
+        </div>
         <div>
-          <p className="text-xs tracking-[0.18em] text-primary uppercase">Puente</p>
-          <h1 className="font-display text-3xl leading-tight sm:text-4xl">{name}</h1>
+          <Eyebrow>{text.kicker}</Eyebrow>
+          <h1 className="font-display mt-1 text-3xl leading-tight sm:text-4xl">{name}</h1>
           {listening ? (
             <p className="mt-1 text-sm text-muted-foreground">{text.room(languageInPhrase(language, locale))}</p>
           ) : null}
-        </div>
-        <div className="flex items-center gap-2">
-          <LocaleSwitch />
-          <StatusPill tone={tone}>{status}</StatusPill>
         </div>
       </header>
 
@@ -108,14 +112,14 @@ function ListenerLive({
             <LanguagePicker value={draft} onChange={setDraft} />
           </div>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <Button type="button" className="h-12 flex-1 text-base" onClick={() => void start(draft)}>
+            <Button type="button" className="h-12 px-6 text-base sm:flex-1" onClick={() => void start(draft)}>
               {text.listenIn(languageInPhrase(draft, locale))}
             </Button>
             {listening ? (
               <Button
                 type="button"
                 variant="outline"
-                className="h-12 text-base"
+                className="h-12 px-6 text-base"
                 onClick={() => {
                   setDraft(language);
                   setChoosing(false);
@@ -172,7 +176,7 @@ function ListenerLive({
                 className="w-36 accent-primary"
               />
             </label>
-            <Button type="button" variant="outline" className="h-11" onClick={() => setChoosing(true)}>
+            <Button type="button" variant="outline" className="h-11 px-5" onClick={() => setChoosing(true)}>
               {text.change}
             </Button>
           </div>

@@ -50,7 +50,9 @@ const es = {
     mic_missing: "No encontramos un micrófono que podamos usar.",
   },
   home: {
-    title: "Una voz para toda la sala.",
+    title: "Una voz",
+    titleTail: "para toda la sala.",
+    eyebrow: "Ai Labs · Interpretación en vivo",
     lede: "El speaker habla en su idioma. Quien entra con el código o el QR elige el suyo y escucha la misma traducción que el resto del evento.",
     openTitle: "Abrir un evento",
     openHelp: "Sale un código y un QR. Con eso entra quien quiera escuchar.",
@@ -66,6 +68,7 @@ const es = {
     footnote: "Hay una traducción por idioma. Cien personas en inglés cuentan como una.",
   },
   speaker: {
+    kicker: "Sala del speaker",
     reconnecting: "Reconectando",
     micOpen: "Micrófono abierto",
     muted: "En silencio",
@@ -85,6 +88,7 @@ const es = {
     heardPending: "El original aparece aquí cuando hables.",
   },
   listener: {
+    kicker: "Oyente",
     connecting: "Conectando",
     closed: "Sala cerrada",
     reconnecting: "Reconectando",
@@ -158,7 +162,9 @@ const en: typeof es = {
     mic_missing: "We couldn't find a microphone we can use.",
   },
   home: {
-    title: "One voice for the whole room.",
+    title: "One voice",
+    titleTail: "for the whole room.",
+    eyebrow: "Ai Labs · Live interpretation",
     lede: "The speaker talks in their language. Anyone who joins with the code or the QR picks theirs and hears the same translation as the rest of the event.",
     openTitle: "Open an event",
     openHelp: "You get a code and a QR. Anyone who wants to listen uses that.",
@@ -174,6 +180,7 @@ const en: typeof es = {
     footnote: "One translation per language. A hundred people in English count as one.",
   },
   speaker: {
+    kicker: "Speaker room",
     reconnecting: "Reconnecting",
     micOpen: "Microphone open",
     muted: "Muted",
@@ -193,6 +200,7 @@ const en: typeof es = {
     heardPending: "The original shows up here when you speak.",
   },
   listener: {
+    kicker: "Listener",
     connecting: "Connecting",
     closed: "Room closed",
     reconnecting: "Reconnecting",
