@@ -3,24 +3,15 @@ export async function startCapture(
   onPcm: (pcm: ArrayBuffer) => void,
   onLevel?: (level: number) => void,
 ): Promise<{ stop: () => void }> {
-  let context: AudioContext
-  try {
-    context = new AudioContext({ sampleRate: 24000, latencyHint: "interactive" })
-  } catch {
-    context = new AudioContext({ latencyHint: "interactive" })
-  }
+  const context = new AudioContext({ latencyHint: "interactive" })
   if (context.state !== "running") await context.resume()
   await context.audioWorklet.addModule("/pcm-worklet.js")
   const source = context.createMediaStreamSource(stream)
   const worklet = new AudioWorkletNode(context, "pcm-capture")
   const analyser = context.createAnalyser()
   analyser.fftSize = 1024
-  const silent = context.createGain()
-  silent.gain.value = 0
   source.connect(worklet)
   source.connect(analyser)
-  worklet.connect(silent)
-  silent.connect(context.destination)
 
   worklet.port.onmessage = (event: MessageEvent<ArrayBuffer>) => {
     onPcm(event.data)
@@ -46,7 +37,6 @@ export async function startCapture(
       cancelAnimationFrame(frame)
       worklet.port.onmessage = null
       worklet.disconnect()
-      silent.disconnect()
       source.disconnect()
       analyser.disconnect()
       for (const track of stream.getTracks()) track.stop()

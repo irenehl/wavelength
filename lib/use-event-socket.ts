@@ -8,7 +8,7 @@ import type { RoomNotice } from "@/lib/copy"
 import type { RoomSnapshot, ServerMessage } from "@/lib/protocol"
 import { rememberSeat, storedSeat } from "@/lib/seat-storage"
 
-const MAX_IN_FLIGHT = 2
+const MAX_IN_FLIGHT = 1
 
 export function useEventSocket(code: string, role: "speaker" | "listener", enabled: boolean, name = "") {
   const [room, setRoom] = useState<RoomSnapshot | null>(null)
@@ -79,18 +79,24 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
         if (role === "listener" && player.didUnlock) void player.resume()
       }
       events.onmessage = (event) => {
-        apply(JSON.parse(event.data) as ServerMessage)
+        if (!event.data) return
+        try {
+          apply(JSON.parse(event.data) as ServerMessage)
+        } catch {
+          // keep the stream; one bad frame should not drop captions
+        }
       }
       events.addEventListener("audio", (event) => {
         playAudio((event as MessageEvent<string>).data)
       })
       events.onerror = () => {
         setConnected(false)
-        events.close()
         if (stopped) return
+        if (events.readyState === EventSource.CONNECTING) return
+        events.close()
         timer = setTimeout(() => {
           void connect()
-        }, 400)
+        }, 800)
       }
     }
 

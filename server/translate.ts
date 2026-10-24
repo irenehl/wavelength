@@ -46,18 +46,22 @@ export function openTranslation(options: {
         session: {
           audio: {
             input: {
-              format: { type: "audio/pcm", rate: 24000 },
               transcription: transcribe ? { model: "gpt-realtime-whisper" } : null,
               noise_reduction: { type: "near_field" },
             },
-            output: {
-              language: options.language,
-              format: { type: "audio/pcm", rate: 24000 },
-            },
+            output: { language: options.language },
           },
         },
       }),
     )
+  }
+
+  const markReady = () => {
+    if (ready) return
+    ready = true
+    const pending = queue.splice(0, queue.length)
+    queuedBytes = 0
+    for (const chunk of pending) appendNow(chunk)
   }
 
   const finish = () => {
@@ -80,23 +84,26 @@ export function openTranslation(options: {
   socket.on("open", sendUpdate)
 
   socket.on("message", (data) => {
-    if (Buffer.isBuffer(data) && data.length > 0 && data[0] !== 0x7b) {
-      options.onAudio(data)
+    const raw = Buffer.isBuffer(data)
+      ? data
+      : Array.isArray(data)
+        ? Buffer.concat(data)
+        : Buffer.from(typeof data === "string" ? data : new Uint8Array(data as ArrayBuffer))
+    const first = raw.length > 0 ? raw[0] : 0
+    if (first !== 0x7b && first !== 0x5b) {
+      if (raw.length) options.onAudio(raw)
       return
     }
 
     let event: TranslationEvent
     try {
-      event = JSON.parse(data.toString()) as TranslationEvent
+      event = JSON.parse(raw.toString()) as TranslationEvent
     } catch {
       return
     }
 
-    if (event.type === "session.updated" && !ready) {
-      ready = true
-      const pending = queue.splice(0, queue.length)
-      queuedBytes = 0
-      for (const chunk of pending) appendNow(chunk)
+    if (event.type === "session.created" || event.type === "session.updated") {
+      markReady()
       return
     }
 
