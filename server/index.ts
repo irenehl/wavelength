@@ -178,6 +178,6 @@ app.prepare().then(() => {
   })
 
   server.listen(port, "0.0.0.0", () => {
-    console.log(`Puente en http://127.0.0.1:${port}`)
+    console.log(`Unísono en http://127.0.0.1:${port}`)
   })
 })

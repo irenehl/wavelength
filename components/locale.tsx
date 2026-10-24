@@ -3,8 +3,8 @@
 import { createContext, useContext, useEffect, useSyncExternalStore, type ReactNode } from "react";
 import { copyFor, type UiLocale } from "@/lib/copy";
 
-const STORAGE_KEY = "puente-locale";
-const CHANGE = "puente-locale-change";
+const STORAGE_KEY = "unisono-locale";
+const CHANGE = "unisono-locale-change";
 let memoryLocale: UiLocale | null = null;
 
 function readLocale(): UiLocale {

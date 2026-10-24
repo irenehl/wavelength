@@ -16,7 +16,7 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Puente · Ai Labs",
+  title: "Unísono · Ai Labs",
   description:
     "Live interpretation for one event, by Ai Labs. One translation per language, shared by the room. Interpretación en vivo para un evento.",
 };
@@ -29,8 +29,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="es" suppressHydrationWarning className={`${alanSans.variable} ${dmSans.variable} h-full scroll-smooth antialiased`}>
       <body className="min-h-dvh flex flex-col">
-        <Script id="puente-locale" strategy="beforeInteractive">
-          {`try{var s=localStorage.getItem("puente-locale");var n=s==="en"||s==="es"?s:(navigator.language||"").toLowerCase().indexOf("en")===0?"en":"es";document.documentElement.lang=n}catch(e){}`}
+        <Script id="unisono-locale" strategy="beforeInteractive">
+          {`try{var s=localStorage.getItem("unisono-locale");var n=s==="en"||s==="es"?s:(navigator.language||"").toLowerCase().indexOf("en")===0?"en":"es";document.documentElement.lang=n}catch(e){}`}
         </Script>
         <LocaleProvider>
           <SiteNav />
