@@ -11,10 +11,12 @@ export async function POST(request: Request, context: { params: Promise<{ code: 
   const { code } = await context.params
   let role: unknown
   let name: string | null = null
+  let seatId: string | undefined
   try {
-    const body = (await request.json()) as { role?: unknown; name?: unknown }
+    const body = (await request.json()) as { role?: unknown; name?: unknown; seatId?: unknown }
     role = body.role
     name = cleanName(body.name)
+    seatId = typeof body.seatId === "string" && body.seatId ? body.seatId : undefined
   } catch {
     return json(400, { code: "room_failed", message: "La sala no pudo completar eso." })
   }
@@ -24,7 +26,7 @@ export async function POST(request: Request, context: { params: Promise<{ code: 
     return json(400, { code: "room_failed", message: "La sala no pudo completar eso." })
   }
 
-  const result = takeSeat(room, role)
+  const result = takeSeat(room, role, seatId)
   if (!result.ok) return json(409, { code: "speaker_taken", message: result.message })
   return json(200, { seatId: result.id })
 }

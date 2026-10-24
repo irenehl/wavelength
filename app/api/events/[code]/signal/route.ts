@@ -21,6 +21,7 @@ export async function POST(request: Request, context: { params: Promise<{ code: 
   const seat = liveSeats.get(body.seatId || "")
   if (!seat) return json(404, { code: "event_missing", message: "No hay un evento con ese código." })
 
+  seat.keep()
   if (body.type === "mic") room.setMic(seat.seatId, Boolean(body.live))
   if (body.type === "listen" && typeof body.language === "string") room.listen(seat.seatId, body.language)
   return json(200, { ok: true })

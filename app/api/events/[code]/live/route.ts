@@ -19,14 +19,15 @@ export async function GET(request: Request, context: { params: Promise<{ code: s
   const encoder = new TextEncoder()
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
+      let generation = 0
       const send = (chunk: string) => {
         try {
           controller.enqueue(encoder.encode(chunk))
         } catch {
-          seat.detach()
+          seat.detach(generation)
         }
       }
-      seat.attach((data) => {
+      generation = seat.attach((data) => {
         if (typeof data === "string") {
           send(`data: ${data}\n\n`)
           return
@@ -34,7 +35,7 @@ export async function GET(request: Request, context: { params: Promise<{ code: s
         send(`event: audio\ndata: ${Buffer.from(data).toString("base64")}\n\n`)
       })
       request.signal.addEventListener("abort", () => {
-        seat.detach()
+        seat.detach(generation)
         try {
           controller.close()
         } catch {

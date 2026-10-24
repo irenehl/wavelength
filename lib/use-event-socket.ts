@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from "react"
 import { PcmPlayer } from "@/lib/audio/playback"
-import { emptyCaptions, reduceCaption, type CaptionState } from "@/lib/captions"
+import { commitIdle, emptyCaptions, reduceCaption, type CaptionState } from "@/lib/captions"
 import type { RoomNotice } from "@/lib/copy"
 import type { RoomSnapshot, ServerMessage } from "@/lib/protocol"
+import { rememberSeat, storedSeat } from "@/lib/seat-storage"
 
 function decodeAudio(data: string) {
   const binary = atob(data)
@@ -85,33 +86,36 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
     const connect = async () => {
       if (stopped) return
       try {
-        let seatId = seatRef.current
-        if (!seatId) {
-          const response = await fetch(`/api/events/${encodeURIComponent(code)}/join`, {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ role, name }),
-          })
-          const body = (await response.json()) as { seatId?: string; code?: string; message?: string }
-          if (!response.ok || !body.seatId) {
-            const notice = { code: body.code, message: body.message }
-            if (response.status === 409 || body.code === "speaker_taken" || body.code === "event_missing") {
-              stopped = true
-              setFatal(notice)
-              return
-            }
-            throw new Error(body.message || "join")
+        const known = seatRef.current || storedSeat(code, role)
+        const response = await fetch(`/api/events/${encodeURIComponent(code)}/join`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ role, name, seatId: known || undefined }),
+        })
+        const body = (await response.json()) as { seatId?: string; code?: string; message?: string }
+        if (!response.ok || !body.seatId) {
+          const notice = { code: body.code, message: body.message }
+          if (response.status === 409 && known) {
+            seatRef.current = known
+            openStream(known)
+            return
           }
-          seatId = body.seatId
-          seatRef.current = seatId
+          if (response.status === 409 || body.code === "speaker_taken" || body.code === "event_missing") {
+            stopped = true
+            setFatal(notice)
+            return
+          }
+          throw new Error(body.message || "join")
         }
+        seatRef.current = body.seatId
+        rememberSeat(code, role, body.seatId)
         if (role === "speaker" && micRef.current) {
-          void signal({ type: "mic", live: true }, seatId)
+          void signal({ type: "mic", live: true }, body.seatId)
         }
         if (role === "listener" && languageRef.current) {
-          void signal({ type: "listen", language: languageRef.current }, seatId)
+          void signal({ type: "listen", language: languageRef.current }, body.seatId)
         }
-        openStream(seatId)
+        openStream(body.seatId)
       } catch {
         if (stopped) return
         setConnected(false)
@@ -126,10 +130,36 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
       stopped = true
       clearTimeout(timer)
       sourceEvent?.close()
-      seatRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- signal uses refs
   }, [code, enabled, name, player, role])
+
+  useEffect(() => {
+    if (!enabled) return
+    const beat = () => {
+      const seatId = seatRef.current
+      if (!seatId) return
+      void signal({ type: "ping" }, seatId)
+    }
+    const timer = setInterval(beat, 12_000)
+    const onVisible = () => {
+      if (document.visibilityState === "visible") beat()
+    }
+    document.addEventListener("visibilitychange", onVisible)
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener("visibilitychange", onVisible)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- signal uses refs
+  }, [code, enabled])
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSource((prev) => commitIdle(prev))
+      setTranslation((prev) => commitIdle(prev))
+    }, 400)
+    return () => clearInterval(timer)
+  }, [])
 
   useEffect(() => {
     return () => player.close()

@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+
 export function Captions({
   eyebrow,
   current,
@@ -11,33 +15,60 @@ export function Captions({
   pending: string;
   size: "hero" | "quiet";
 }) {
-  const history = lines.slice(-4);
+  const scroller = useRef<HTMLDivElement>(null);
+  const empty = lines.length === 0 && !current;
+
+  useEffect(() => {
+    const box = scroller.current;
+    if (!box) return;
+    box.scrollTo({ top: box.scrollHeight, behavior: "smooth" });
+  }, [current, lines]);
+
+  const hero = size === "hero";
+
   return (
-    <section aria-live="polite" aria-relevant="additions text">
+    <section aria-live="polite" aria-relevant="additions text" className="flex min-h-0 flex-col">
       <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">{eyebrow}</p>
-      <div className={size === "hero" ? "mt-4 space-y-2" : "mt-3 space-y-1"}>
-        {history.map((line, index) => (
-          <p
-            key={`${index}-${line.slice(0, 16)}`}
-            className={
-              size === "hero"
-                ? "font-display text-xl leading-snug text-foreground/40"
-                : "text-sm leading-6 text-muted-foreground"
-            }
-          >
-            {line}
-          </p>
-        ))}
-      </div>
-      <p
+      <div
+        ref={scroller}
         className={
-          size === "hero"
-            ? "font-display mt-3 text-[clamp(2rem,6vw,4.25rem)] leading-[1.05] text-balance"
-            : "mt-2 text-lg leading-7"
+          hero
+            ? "mt-4 max-h-[min(58dvh,32rem)] overflow-y-auto pr-1 [mask-image:linear-gradient(to_bottom,transparent,black_1.25rem,black)]"
+            : "mt-3 max-h-40 overflow-y-auto pr-1"
         }
       >
-        {current || <span className="text-muted-foreground/70">{pending}</span>}
-      </p>
+        {empty ? (
+          <p className={hero ? "text-lg leading-8 text-muted-foreground" : "text-sm leading-6 text-muted-foreground"}>
+            {pending}
+          </p>
+        ) : (
+          <div className={hero ? "flex flex-col gap-4 py-1" : "flex flex-col gap-2 py-1"}>
+            {lines.map((line, index) => (
+              <p
+                key={`${index}-${line.slice(0, 24)}`}
+                className={
+                  hero
+                    ? "font-display text-[1.35rem] leading-snug text-pretty text-foreground/70 sm:text-2xl"
+                    : "text-sm leading-6 text-muted-foreground"
+                }
+              >
+                {line}
+              </p>
+            ))}
+            {current ? (
+              <p
+                className={
+                  hero
+                    ? "font-display text-[1.35rem] leading-snug text-pretty sm:text-2xl"
+                    : "text-sm leading-6 text-foreground"
+                }
+              >
+                {current}
+              </p>
+            ) : null}
+          </div>
+        )}
+      </div>
     </section>
   );
 }

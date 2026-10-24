@@ -11,6 +11,7 @@ export async function POST(request: Request, context: { params: Promise<{ code: 
   const room = getHub().get(code)
   const seat = liveSeats.get(request.headers.get("x-seat-id") || "")
   if (!room || !seat) return json(404, { code: "event_missing", message: "No hay un evento con ese código." })
+  seat.keep()
   const pcm = Buffer.from(await request.arrayBuffer())
   if (pcm.length) room.appendAudio(seat.seatId, pcm)
   return json(200, { ok: true })
