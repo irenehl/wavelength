@@ -1,7 +1,7 @@
 import type { EventRoom, RoomSocket } from "./rooms"
 
 const OPEN = 1
-const LISTENER_GRACE_MS = 20_000
+const LISTENER_GRACE_MS = 10 * 60_000
 const SPEAKER_GRACE_MS = 30 * 60_000
 
 export class LiveSeat implements RoomSocket {
