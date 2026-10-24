@@ -33,7 +33,7 @@ function ListenerLive({
   fallbackName: string;
   apiKeyConfigured: boolean;
 }) {
-  const socket = useEventSocket(code, "listener", true);
+  const socket = useEventSocket(code, "listener", true, fallbackName);
   const { locale, copy } = useCopy();
   const text = copy.listener;
   const [language, setLanguage] = useState<OutputLanguage>("en");

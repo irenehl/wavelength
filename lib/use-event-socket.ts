@@ -13,7 +13,7 @@ function decodeAudio(data: string) {
   return bytes.buffer
 }
 
-export function useEventSocket(code: string, role: "speaker" | "listener", enabled: boolean) {
+export function useEventSocket(code: string, role: "speaker" | "listener", enabled: boolean, name = "") {
   const [room, setRoom] = useState<RoomSnapshot | null>(null)
   const [connected, setConnected] = useState(false)
   const [error, setError] = useState<RoomNotice | null>(null)
@@ -90,7 +90,7 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
           const response = await fetch(`/api/events/${encodeURIComponent(code)}/join`, {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ role }),
+            body: JSON.stringify({ role, name }),
           })
           const body = (await response.json()) as { seatId?: string; code?: string; message?: string }
           if (!response.ok || !body.seatId) {
@@ -129,7 +129,7 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
       seatRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- signal uses refs
-  }, [code, enabled, player, role])
+  }, [code, enabled, name, player, role])
 
   useEffect(() => {
     return () => player.close()

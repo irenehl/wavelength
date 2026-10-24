@@ -34,7 +34,7 @@ function SpeakerLive({
   fallbackName: string;
   apiKeyConfigured: boolean;
 }) {
-  const socket = useEventSocket(code, "speaker", true);
+  const socket = useEventSocket(code, "speaker", true, fallbackName);
   const { locale, copy } = useCopy();
   const text = copy.speaker;
   const capture = useRef<{ stop: () => void } | null>(null);

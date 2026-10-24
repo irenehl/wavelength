@@ -1,3 +1,4 @@
+import { cleanName } from "@/lib/event-name"
 import { getHub } from "@/server/hub"
 import { json } from "@/server/http"
 import { takeSeat } from "@/server/live-seats"
@@ -8,15 +9,17 @@ export const preferredRegion = ["iad1"]
 
 export async function POST(request: Request, context: { params: Promise<{ code: string }> }) {
   const { code } = await context.params
-  const room = getHub().get(code)
-  if (!room) return json(404, { code: "event_missing", message: "No hay un evento con ese código." })
-
   let role: unknown
+  let name: string | null = null
   try {
-    role = (await request.json())?.role
+    const body = (await request.json()) as { role?: unknown; name?: unknown }
+    role = body.role
+    name = cleanName(body.name)
   } catch {
     return json(400, { code: "room_failed", message: "La sala no pudo completar eso." })
   }
+  const room = name ? getHub().ensure(code, name) : getHub().get(code)
+  if (!room) return json(404, { code: "event_missing", message: "No hay un evento con ese código." })
   if (role !== "speaker" && role !== "listener") {
     return json(400, { code: "room_failed", message: "La sala no pudo completar eso." })
   }
