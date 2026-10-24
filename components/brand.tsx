@@ -12,7 +12,7 @@ export function Lockup({ tone = "light" }: { tone?: "light" | "ink" }) {
   return (
     <Link
       href="/"
-      aria-label="Unison · Ai Labs"
+      aria-label="Wavelength · Ai Labs"
       className="inline-flex items-center gap-3 rounded-sm focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
     >
       <Image
@@ -24,7 +24,7 @@ export function Lockup({ tone = "light" }: { tone?: "light" | "ink" }) {
         className="h-7 w-auto"
       />
       <span className={`h-6 w-px ${ink ? "bg-on-dark/20" : "bg-border"}`} aria-hidden />
-      <span className="font-display text-xl leading-none">Unison</span>
+      <span className="font-display text-xl leading-none">Wavelength</span>
     </Link>
   );
 }

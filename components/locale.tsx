@@ -3,8 +3,8 @@
 import { createContext, useContext, useEffect, useSyncExternalStore, type ReactNode } from "react";
 import { copyFor, type UiLocale } from "@/lib/copy";
 
-const STORAGE_KEY = "unison-locale";
-const CHANGE = "unison-locale-change";
+const STORAGE_KEY = "wavelength-locale";
+const CHANGE = "wavelength-locale-change";
 let memoryLocale: UiLocale | null = null;
 
 function readLocale(): UiLocale {

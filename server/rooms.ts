@@ -234,7 +234,7 @@ export class EventRoom {
         this.syncSessions("drop")
       },
     }
-    live.translator = this.openTranslator(language, transcribe, `unison-${this.code}`, handlers)
+    live.translator = this.openTranslator(language, transcribe, `wavelength-${this.code}`, handlers)
     return live
   }
 
