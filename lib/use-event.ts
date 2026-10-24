@@ -9,12 +9,13 @@ type EventState =
   | { status: "missing"; event: null }
   | { status: "error"; event: null }
 
-export function useEvent(code: string): EventState {
+export function useEvent(code: string, name = ""): EventState {
   const [state, setState] = useState<EventState>({ status: "loading", event: null })
 
   useEffect(() => {
     let cancel = false
-    fetch(`/api/events/${encodeURIComponent(code)}`)
+    const query = name ? `?name=${encodeURIComponent(name)}` : ""
+    fetch(`/api/events/${encodeURIComponent(code)}${query}`)
       .then(async (response) => {
         if (cancel) return
         if (response.status === 404) {
@@ -33,7 +34,7 @@ export function useEvent(code: string): EventState {
     return () => {
       cancel = true
     }
-  }, [code])
+  }, [code, name])
 
   return state
 }

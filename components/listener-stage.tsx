@@ -15,8 +15,8 @@ import { languageInPhrase, languageLabel, type OutputLanguage } from "@/lib/lang
 import { useEvent } from "@/lib/use-event";
 import { useEventSocket } from "@/lib/use-event-socket";
 
-export function ListenerStage({ code }: { code: string }) {
-  const event = useEvent(code);
+export function ListenerStage({ code, name = "" }: { code: string; name?: string }) {
+  const event = useEvent(code, name);
   if (!isValidCode(code)) return <MissingEvent code={code} />;
   if (event.status === "loading") return <LoadingEvent />;
   if (event.status === "missing") return <MissingEvent code={code} />;

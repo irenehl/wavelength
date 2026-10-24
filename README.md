@@ -29,6 +29,8 @@ npm run dev
 
 Abre [http://127.0.0.1:38471](http://127.0.0.1:38471). Crea un evento, abre el enlace del oyente en otra ventana y elige inglés. Sin la llave la sala abre igual y la pantalla lo dice; no hay traducción inventada.
 
+Si lo subes a Vercel, Wavelength usa las rutas `/api/events`. En el proyecto de Vercel hay que poner `OPENAI_API_KEY`. Las salas viven en memoria: un restart o otra instancia pierde el evento.
+
 ## Cómo está armado
 
 El speaker manda el micrófono al servidor, ya en PCM de 24 kHz. El servidor abre una sesión de OpenAI por idioma activo y reparte el audio traducido y los subtítulos a quienes eligieron ese idioma. La transcripción del original va una sola vez por evento.

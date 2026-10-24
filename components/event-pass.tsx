@@ -9,6 +9,7 @@ import { LocaleSwitch, useCopy } from "@/components/locale";
 import { TextSpiral } from "@/components/text-spiral";
 import { Button } from "@/components/ui/button";
 import { formatCode } from "@/lib/code";
+import { listenerPath } from "@/lib/room-link";
 import { copyFor } from "@/lib/copy";
 
 export function EventPass({ code, name }: { code: string; name: string }) {
@@ -22,7 +23,7 @@ export function EventPass({ code, name }: { code: string; name: string }) {
   const readable = formatCode(code);
 
   useEffect(() => {
-    const url = `${window.location.origin}/l/${code}`;
+    const url = `${window.location.origin}${listenerPath(code, name)}`;
     let cancel = false;
     QRCode.toDataURL(url, {
       margin: 1,
@@ -38,13 +39,11 @@ export function EventPass({ code, name }: { code: string; name: string }) {
     return () => {
       cancel = true;
     };
-  }, [code]);
+  }, [code, name]);
 
   async function copyLink() {
     try {
-      await navigator.clipboard.writeText(
-        `${window.location.origin}/l/${code}`,
-      );
+      await navigator.clipboard.writeText(`${window.location.origin}${listenerPath(code, name)}`);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     } catch {

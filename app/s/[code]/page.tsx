@@ -1,7 +1,14 @@
 import { SpeakerStage } from "@/components/speaker-stage";
 import { normalizeCode } from "@/lib/code";
 
-export default async function SpeakerPage({ params }: { params: Promise<{ code: string }> }) {
+export default async function SpeakerPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ code: string }>;
+  searchParams: Promise<{ name?: string }>;
+}) {
   const { code } = await params;
-  return <SpeakerStage code={normalizeCode(code)} />;
+  const { name = "" } = await searchParams;
+  return <SpeakerStage code={normalizeCode(code)} name={name} />;
 }

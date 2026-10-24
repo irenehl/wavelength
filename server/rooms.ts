@@ -338,4 +338,18 @@ export class EventHub {
   get(code: string): EventRoom | undefined {
     return this.events.get(normalizeCode(code))
   }
+
+  ensure(code: string, name: string): EventRoom {
+    const existing = this.get(code)
+    if (existing) return existing
+    const normalized = normalizeCode(code)
+    const room = new EventRoom({
+      code: normalized,
+      name,
+      apiKeyConfigured: this.options.apiKeyConfigured,
+      openTranslator: this.options.openTranslator,
+    })
+    this.events.set(normalized, room)
+    return room
+  }
 }

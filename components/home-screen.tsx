@@ -10,6 +10,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { formatCode, isValidCode, normalizeCode } from "@/lib/code";
+import { listenerPath, speakerPath } from "@/lib/room-link";
 import { errorText, type RoomNotice } from "@/lib/copy";
 import { OUTPUT_LANGUAGES } from "@/lib/languages";
 
@@ -67,7 +68,7 @@ export function HomeScreen() {
         );
         return;
       }
-      router.push(`/s/${body.code}`);
+      router.push(speakerPath(body.code, trimmed));
     } catch {
       setCreateError({ code: "reach_server" });
     } finally {
@@ -86,7 +87,7 @@ export function HomeScreen() {
     setJoinError(null);
     try {
       const response = await fetch(`/api/events/${normalized}`);
-      const body = (await response.json()) as { code?: string; message?: string };
+      const body = (await response.json()) as { code?: string; name?: string; message?: string };
       if (response.status === 404) {
         setJoinError({ code: body.code || "event_missing", message: body.message });
         return;
@@ -95,7 +96,7 @@ export function HomeScreen() {
         setJoinError({ code: "search_failed", message: body.message });
         return;
       }
-      router.push(`/l/${normalized}`);
+      router.push(listenerPath(normalized, body.name || ""));
     } catch {
       setJoinError({ code: "reach_server" });
     } finally {

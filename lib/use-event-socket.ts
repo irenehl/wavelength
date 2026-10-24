@@ -6,6 +6,13 @@ import { emptyCaptions, reduceCaption, type CaptionState } from "@/lib/captions"
 import type { RoomNotice } from "@/lib/copy"
 import type { RoomSnapshot, ServerMessage } from "@/lib/protocol"
 
+function decodeAudio(data: string) {
+  const binary = atob(data)
+  const bytes = new Uint8Array(binary.length)
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index)
+  return bytes.buffer
+}
+
 export function useEventSocket(code: string, role: "speaker" | "listener", enabled: boolean) {
   const [room, setRoom] = useState<RoomSnapshot | null>(null)
   const [connected, setConnected] = useState(false)
@@ -13,87 +20,152 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
   const [fatal, setFatal] = useState<RoomNotice | null>(null)
   const [source, setSource] = useState<CaptionState>(emptyCaptions)
   const [translation, setTranslation] = useState<CaptionState>(emptyCaptions)
-  const socketRef = useRef<WebSocket | null>(null)
+  const seatRef = useRef<string | null>(null)
   const micRef = useRef(false)
   const languageRef = useRef<string | null>(null)
+  const audioRef = useRef<Uint8Array[]>([])
+  const sendingRef = useRef(false)
   const [player] = useState(() => new PcmPlayer())
 
   useEffect(() => {
     if (!enabled) return
     let stopped = false
-    let socket: WebSocket | null = null
+    let sourceEvent: EventSource | null = null
     let timer: ReturnType<typeof setTimeout> | undefined
 
-    const connect = () => {
-      if (stopped) return
-      const protocol = window.location.protocol === "https:" ? "wss" : "ws"
-      const ws = new WebSocket(`${protocol}://${window.location.host}/ws?code=${encodeURIComponent(code)}`)
-      socket = ws
-      socketRef.current = ws
-      ws.binaryType = "arraybuffer"
-      ws.onopen = () => {
-        setConnected(true)
-        ws.send(JSON.stringify({ type: "join", role }))
-        if (role === "speaker" && micRef.current) ws.send(JSON.stringify({ type: "mic", live: true }))
-        if (role === "listener" && languageRef.current) {
-          ws.send(JSON.stringify({ type: "listen", language: languageRef.current }))
-        }
+    const apply = (message: ServerMessage) => {
+      if (message.type === "room") {
+        setRoom(message.room)
+        return
       }
-      ws.onmessage = (event) => {
-        if (event.data instanceof ArrayBuffer) {
-          player.push(event.data)
+      if (message.type === "error") {
+        const notice = { code: message.code, message: message.message }
+        if (message.fatal) {
+          stopped = true
+          setFatal(notice)
+          sourceEvent?.close()
           return
         }
-        const message = JSON.parse(String(event.data)) as ServerMessage
-        if (message.type === "room") {
-          setRoom(message.room)
-          return
-        }
-        if (message.type === "error") {
-          const notice = { code: message.code, message: message.message }
-          if (message.fatal) {
-            stopped = true
-            setFatal(notice)
-            ws.close()
-            return
-          }
-          setError(notice)
-          return
-        }
-        if (message.type === "transcript") {
-          const update = {
-            delta: message.delta,
-            done: message.done,
-            reset: message.reset,
-            transcript: message.transcript,
-          }
-          if (message.side === "source") setSource((prev) => reduceCaption(prev, update))
-          if (message.side === "translation") setTranslation((prev) => reduceCaption(prev, update))
-        }
+        setError(notice)
+        return
       }
-      ws.onclose = () => {
-        setConnected(false)
-        if (stopped) return
-        timer = setTimeout(connect, 800)
+      if (message.type === "transcript") {
+        const update = {
+          delta: message.delta,
+          done: message.done,
+          reset: message.reset,
+          transcript: message.transcript,
+        }
+        if (message.side === "source") setSource((prev) => reduceCaption(prev, update))
+        if (message.side === "translation") setTranslation((prev) => reduceCaption(prev, update))
       }
     }
 
-    connect()
+    const openStream = (seatId: string) => {
+      if (stopped) return
+      const events = new EventSource(`/api/events/${encodeURIComponent(code)}/live?seatId=${encodeURIComponent(seatId)}`)
+      sourceEvent = events
+      events.onopen = () => setConnected(true)
+      events.onmessage = (event) => {
+        apply(JSON.parse(event.data) as ServerMessage)
+      }
+      events.addEventListener("audio", (event) => {
+        player.push(decodeAudio((event as MessageEvent<string>).data))
+      })
+      events.onerror = () => {
+        setConnected(false)
+        events.close()
+        if (stopped) return
+        timer = setTimeout(() => {
+          void connect()
+        }, 800)
+      }
+    }
+
+    const connect = async () => {
+      if (stopped) return
+      try {
+        let seatId = seatRef.current
+        if (!seatId) {
+          const response = await fetch(`/api/events/${encodeURIComponent(code)}/join`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ role }),
+          })
+          const body = (await response.json()) as { seatId?: string; code?: string; message?: string }
+          if (!response.ok || !body.seatId) {
+            const notice = { code: body.code, message: body.message }
+            if (response.status === 409 || body.code === "speaker_taken" || body.code === "event_missing") {
+              stopped = true
+              setFatal(notice)
+              return
+            }
+            throw new Error(body.message || "join")
+          }
+          seatId = body.seatId
+          seatRef.current = seatId
+        }
+        if (role === "speaker" && micRef.current) {
+          void signal({ type: "mic", live: true }, seatId)
+        }
+        if (role === "listener" && languageRef.current) {
+          void signal({ type: "listen", language: languageRef.current }, seatId)
+        }
+        openStream(seatId)
+      } catch {
+        if (stopped) return
+        setConnected(false)
+        timer = setTimeout(() => {
+          void connect()
+        }, 800)
+      }
+    }
+
+    void connect()
     return () => {
       stopped = true
       clearTimeout(timer)
-      socket?.close()
-      if (socketRef.current === socket) socketRef.current = null
+      sourceEvent?.close()
+      seatRef.current = null
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- signal uses refs
   }, [code, enabled, player, role])
 
   useEffect(() => {
     return () => player.close()
   }, [player])
 
-  function send(message: object) {
-    const socket = socketRef.current
-    if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message))
+  async function signal(message: object, seatId = seatRef.current) {
+    if (!seatId) return
+    await fetch(`/api/events/${encodeURIComponent(code)}/signal`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ seatId, ...message }),
+    })
+  }
+
+  async function flushAudio() {
+    if (sendingRef.current) return
+    sendingRef.current = true
+    while (audioRef.current.length && seatRef.current) {
+      const chunks = audioRef.current.splice(0, 4)
+      const bytes = new Uint8Array(chunks.reduce((total, chunk) => total + chunk.byteLength, 0))
+      let offset = 0
+      for (const chunk of chunks) {
+        bytes.set(chunk, offset)
+        offset += chunk.byteLength
+      }
+      try {
+        await fetch(`/api/events/${encodeURIComponent(code)}/audio`, {
+          method: "POST",
+          headers: { "x-seat-id": seatRef.current },
+          body: bytes,
+        })
+      } catch {
+        break
+      }
+    }
+    sendingRef.current = false
   }
 
   return {
@@ -109,17 +181,17 @@ export function useEventSocket(code: string, role: "speaker" | "listener", enabl
     },
     announceMic(live: boolean) {
       micRef.current = live
-      send({ type: "mic", live })
+      void signal({ type: "mic", live })
     },
     announceListen(language: string) {
       languageRef.current = language
       setTranslation(emptyCaptions)
       player.reset()
-      send({ type: "listen", language })
+      void signal({ type: "listen", language })
     },
     sendAudio(pcm: ArrayBuffer) {
-      const socket = socketRef.current
-      if (socket && socket.readyState === WebSocket.OPEN) socket.send(pcm)
+      audioRef.current.push(new Uint8Array(pcm))
+      void flushAudio()
     },
   }
 }

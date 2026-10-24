@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 import type { ServerMessage } from "../lib/protocol"
-import { EventRoom, type RoomSocket } from "./rooms"
+import { EventHub, EventRoom, type RoomSocket } from "./rooms"
 import type { OpenTranslator, TranslationHandlers, Translator } from "./translator"
 
 type Opened = {
@@ -223,4 +223,17 @@ test("a dropped translation reopens, then stops after repeated failures", () => 
   assert.equal(opened.length, 3)
   room.appendAudio(speaker.id, Buffer.from([1, 2, 3, 4]))
   assert.equal(opened.every((session) => session.audio.length === 0), true)
+})
+
+test("ensure reuses the room for the same code", () => {
+  const hub = new EventHub({
+    apiKeyConfigured: false,
+    openTranslator: () => {
+      throw new Error("unused")
+    },
+  })
+  const first = hub.ensure("k7mp2q", "DevDay")
+  const second = hub.ensure("K7M P2Q", "Otro")
+  assert.equal(first, second)
+  assert.equal(first.name, "DevDay")
 })
