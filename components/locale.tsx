@@ -63,34 +63,19 @@ export function useCopy() {
   return { locale: value.locale, setLocale: value.setLocale, copy: copyFor(value.locale) };
 }
 
-export function LocaleSwitch({ tone = "light" }: { tone?: "light" | "ink" }) {
+export function LocaleSwitch({ className = "" }: { className?: string }) {
   const { locale, setLocale, copy } = useCopy();
-  const ink = tone === "ink";
+  const next: UiLocale = locale === "es" ? "en" : "es";
 
   return (
-    <div
-      role="group"
-      aria-label={copy.switchAria}
-      className={`inline-flex rounded-full border p-0.5 text-xs font-semibold ${
-        ink ? "border-white/12 bg-white/5" : "border-white/12 bg-ink/90"
-      }`}
+    <button
+      type="button"
+      onClick={() => setLocale(next)}
+      aria-label={copy.switchTo}
+      title={copy.switchTo}
+      className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-2 text-xs font-semibold tracking-wider text-on-dark uppercase transition-colors hover:bg-on-dark/10 focus-visible:ring-2 focus-visible:ring-on-dark/50 focus-visible:outline-none ${className}`}
     >
-      {(["es", "en"] as const).map((item) => {
-        const active = locale === item;
-        return (
-          <button
-            key={item}
-            type="button"
-            aria-pressed={active}
-            onClick={() => setLocale(item)}
-            className={`rounded-full px-2.5 py-1 tracking-wider uppercase transition-colors ${
-              active ? "bg-primary text-primary-foreground" : "text-on-ink/70 hover:text-on-ink"
-            }`}
-          >
-            {item}
-          </button>
-        );
-      })}
-    </div>
+      {next}
+    </button>
   );
 }

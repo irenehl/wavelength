@@ -3,11 +3,12 @@
 import { useRef, useState } from "react";
 import { Mic, MicOff } from "lucide-react";
 import { Captions } from "@/components/captions";
-import { BrandMark, Eyebrow } from "@/components/brand";
+import { Eyebrow, Lockup } from "@/components/brand";
 import { EventPass } from "@/components/event-pass";
-import { LocaleSwitch, useCopy } from "@/components/locale";
+import { useCopy } from "@/components/locale";
 import { KeyBanner, LoadingEvent, MissingEvent, ServerError } from "@/components/notices";
 import { StatusPill } from "@/components/status-pill";
+import { TextSpiral } from "@/components/text-spiral";
 import { startCapture } from "@/lib/audio/capture";
 import { isValidCode } from "@/lib/code";
 import { errorText, type RoomNotice } from "@/lib/copy";
@@ -75,92 +76,91 @@ function SpeakerLive({
   const waiting = room?.waiting ?? 0;
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-5 sm:px-6 sm:py-8">
-      <header className="flex flex-col gap-6">
+    <main className="grid flex-1 grid-cols-1 lg:min-h-dvh lg:grid-cols-2">
+      <div className="pt-header flex min-w-0 flex-col gap-10 border-b border-border px-6 pb-12 sm:px-10 lg:border-r lg:border-b-0 lg:px-12 xl:px-16">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <BrandMark />
-          <div className="flex items-center gap-2">
-            <StatusPill tone={live ? "live" : socket.connected ? "wait" : "off"}>
-              {!socket.connected ? text.reconnecting : live ? text.micOpen : text.muted}
-            </StatusPill>
-            <LocaleSwitch />
-          </div>
+          <Lockup />
+          <StatusPill tone={live ? "live" : socket.connected ? "wait" : "off"}>
+            {!socket.connected ? text.reconnecting : live ? text.micOpen : text.muted}
+          </StatusPill>
         </div>
-        <div>
+
+        <div className="flex flex-col gap-4">
           <Eyebrow>{text.kicker}</Eyebrow>
-          <h1 className="font-display mt-1 text-3xl leading-tight sm:text-4xl">{name}</h1>
+          <h1 className="font-display text-4xl leading-[1.05] text-balance sm:text-5xl">{name}</h1>
         </div>
-      </header>
 
-      {!keyReady ? <KeyBanner /> : null}
-      {socket.fatal ? (
-        <p role="alert" className="rounded-2xl border border-destructive/40 px-4 py-3 text-sm">
-          {errorText(locale, socket.fatal)}
-        </p>
-      ) : null}
-      {socket.error ? (
-        <p role="alert" className="rounded-2xl border border-destructive/40 px-4 py-3 text-sm">
-          {errorText(locale, socket.error)}
-        </p>
-      ) : null}
+        {!keyReady || socket.fatal || socket.error ? (
+          <div className="flex flex-col gap-3">
+            {!keyReady ? <KeyBanner /> : null}
+            {socket.fatal ? <Alert>{errorText(locale, socket.fatal)}</Alert> : null}
+            {socket.error ? <Alert>{errorText(locale, socket.error)}</Alert> : null}
+          </div>
+        ) : null}
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(18rem,24rem)_1fr]">
-        <EventPass code={code} name={name} />
-
-        <div className="flex flex-col gap-6">
-          <section className="rounded-2xl border border-border bg-card px-6 py-8">
-            <div className="flex flex-col items-center">
-              <button
-                type="button"
-                onClick={() => void (live ? closeMic() : openMic())}
-                disabled={arming || Boolean(socket.fatal)}
-                aria-pressed={live}
-                aria-label={live ? text.mute : text.openMic}
-                className="relative grid size-32 place-items-center rounded-full bg-primary text-primary-foreground shadow-[0_10px_40px_-10px_var(--brand-purple)] transition-colors hover:bg-[var(--brand-purple-soft)] disabled:opacity-60"
-              >
-                <span
-                  className="absolute inset-0 rounded-full border border-primary"
-                  style={{ transform: `scale(${1 + level * 0.28})`, opacity: live ? 0.7 : 0 }}
-                />
-                {live ? <MicOff className="size-8" /> : <Mic className="size-8" />}
-              </button>
-              <p className="font-display mt-5 text-xl">{arming ? text.arming : live ? text.mute : text.openMic}</p>
-              <p className="mt-2 max-w-sm text-center text-sm leading-6 text-muted-foreground">
-                {live ? text.liveHelp : text.idleHelp}
-              </p>
-              {micError ? (
-                <p role="alert" className="mt-4 text-center text-sm text-destructive">
-                  {errorText(locale, micError)}
-                </p>
-              ) : null}
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-border bg-card px-6 py-5">
-            <Eyebrow>{text.listeners}</Eyebrow>
-            {counts.length === 0 && waiting === 0 ? (
-              <p className="mt-3 text-lg">{text.nobody}</p>
-            ) : (
-              <ul className="mt-3 space-y-1 text-lg">
-                {counts.map((item) => (
-                  <li key={item.language}>{text.count(item.count, languageInPhrase(item.language, locale))}</li>
-                ))}
-                {waiting > 0 ? <li className="text-muted-foreground">{text.waiting(waiting)}</li> : null}
-              </ul>
-            )}
-          </section>
-
-          <section className="rounded-2xl border border-border bg-card px-6 py-5">
-            <Captions
-              eyebrow={text.heard}
-              current={socket.source.current}
-              lines={socket.source.lines}
-              pending={live ? text.listening : text.heardPending}
-              size="quiet"
+        <section className="flex flex-col gap-6 rounded-3xl border border-border bg-card p-6 sm:flex-row sm:items-center sm:p-8">
+          <button
+            type="button"
+            onClick={() => void (live ? closeMic() : openMic())}
+            disabled={arming || Boolean(socket.fatal)}
+            aria-pressed={live}
+            aria-label={live ? text.mute : text.openMic}
+            className="brand-action relative grid size-24 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground hover:bg-primary/80 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-60"
+          >
+            <span
+              aria-hidden
+              className="absolute inset-0 rounded-full border-2 border-primary"
+              style={{ transform: `scale(${1 + level * 0.32})`, opacity: live ? 0.7 : 0 }}
             />
-          </section>
+            {live ? <MicOff className="size-7" /> : <Mic className="size-7" />}
+          </button>
+          <div className="min-w-0">
+            <h2 className="font-display text-2xl leading-tight">{arming ? text.arming : live ? text.mute : text.openMic}</h2>
+            <p className="mt-2 max-w-prose text-base leading-relaxed text-muted-foreground">{live ? text.liveHelp : text.idleHelp}</p>
+            {micError ? (
+              <p role="alert" className="mt-3 text-sm text-destructive">
+                {errorText(locale, micError)}
+              </p>
+            ) : null}
+          </div>
+        </section>
+
+        <section className="flex flex-col gap-4">
+          <Eyebrow>{text.listeners}</Eyebrow>
+          <ul className="flex flex-col divide-y divide-border border-y border-border">
+            {counts.length === 0 && waiting === 0 ? <li className="py-3 text-base text-muted-foreground">{text.nobody}</li> : null}
+            {counts.map((item) => (
+              <li key={item.language} className="py-3 text-base">
+                {text.count(item.count, languageInPhrase(item.language, locale))}
+              </li>
+            ))}
+            {waiting > 0 ? <li className="py-3 text-base text-muted-foreground">{text.waiting(waiting)}</li> : null}
+          </ul>
+        </section>
+
+        <Captions
+          eyebrow={text.heard}
+          current={socket.source.current}
+          lines={socket.source.lines}
+          pending={live ? text.listening : text.heardPending}
+          size="quiet"
+        />
+      </div>
+
+      <div className="on-dark relative overflow-hidden bg-surface-ink text-on-dark lg:sticky lg:top-0 lg:h-dvh">
+        <TextSpiral words={copy.home.spiral} className="absolute inset-0 opacity-30" />
+        <div className="relative flex h-full flex-col items-center justify-center px-6 py-12 sm:px-10 lg:pt-[calc(var(--site-header-offset)+1rem)]">
+          <EventPass code={code} name={name} />
         </div>
       </div>
     </main>
+  );
+}
+
+function Alert({ children }: { children: string }) {
+  return (
+    <p role="alert" className="rounded-2xl border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm leading-relaxed">
+      {children}
+    </p>
   );
 }

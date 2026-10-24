@@ -13,6 +13,12 @@
   --color-ink: var(--brand-ink);
   --color-on-ink: var(--brand-white);
   --color-lavender: var(--brand-lavender);
+  --color-purple: var(--brand-purple);
+  --color-graphite: var(--brand-graphite);
+  --color-surface-ink: var(--brand-ink);
+  --color-surface-soft: var(--brand-lavender);
+  --color-on-dark: var(--brand-white);
+  --color-trust: var(--brand-trust);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -64,13 +70,22 @@
 
   --background: var(--brand-white);
   --foreground: var(--brand-graphite);
-  --card: #ffffff;
+  --brand-trust: color-mix(in srgb, var(--brand-purple) 28%, var(--brand-graphite));
+  --shadow-color: color-mix(in srgb, var(--brand-graphite) 8%, transparent);
+  --shadow-color-strong: color-mix(in srgb, var(--brand-graphite) 12%, transparent);
+  --shadow-glow: color-mix(in srgb, var(--brand-purple) 32%, transparent);
+  --space-section-y: 4rem;
+  --space-gutter: 1.5rem;
+  --max-width: 90rem;
+  --site-header-offset: calc(env(safe-area-inset-top, 0px) + 4.5rem);
+
+  --card: var(--brand-white);
   --card-foreground: var(--brand-graphite);
-  --popover: #ffffff;
+  --popover: var(--brand-white);
   --popover-foreground: var(--brand-graphite);
   --primary: var(--brand-purple);
   --primary-foreground: var(--brand-graphite);
-  --secondary: var(--brand-lavender);
+  --secondary: var(--brand-white);
   --secondary-foreground: var(--brand-graphite);
   --muted: var(--brand-lavender);
   --muted-foreground: var(--brand-muted);
@@ -94,6 +109,14 @@
   --sidebar-accent-foreground: var(--brand-graphite);
   --sidebar-border: var(--brand-border);
   --sidebar-ring: var(--brand-purple);
+}
+
+@media (width >= 768px) {
+  :root {
+    --space-section-y: 6rem;
+    --space-gutter: 2.5rem;
+    --site-header-offset: calc(env(safe-area-inset-top, 0px) + 4.25rem);
+  }
 }
 
 @layer base {
@@ -121,4 +144,85 @@
 .surface-ink {
   background: var(--brand-ink);
   color: var(--brand-white);
+}
+
+.on-dark {
+  --foreground: var(--brand-white);
+  --muted-foreground: color-mix(in srgb, var(--brand-white) 65%, transparent);
+  --border: color-mix(in srgb, var(--brand-white) 12%, transparent);
+  --input: color-mix(in srgb, var(--brand-white) 16%, transparent);
+  --card: color-mix(in srgb, var(--brand-white) 8%, var(--brand-graphite));
+  --card-foreground: var(--brand-white);
+  --shadow-glow: color-mix(in srgb, var(--brand-purple) 24%, transparent);
+  color-scheme: dark;
+}
+
+.section-y {
+  padding-block: var(--space-section-y);
+}
+
+.page-gutter {
+  padding-inline: var(--space-gutter);
+}
+
+.max-w-content {
+  max-width: var(--max-width);
+}
+
+.pt-header {
+  padding-top: calc(var(--site-header-offset) + 0.5rem);
+}
+
+.shadow-soft {
+  box-shadow: 0 1px 2px var(--shadow-color);
+}
+
+.shadow-lift {
+  box-shadow: 0 2px 6px var(--shadow-color-strong);
+}
+
+.shadow-panel {
+  box-shadow: 0 2px 8px var(--shadow-color), 0 32px 80px -24px var(--shadow-glow);
+}
+
+.brand-action {
+  transition: color 150ms, background-color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .brand-action:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px var(--shadow-color-strong);
+  }
+  .brand-action:active {
+    transform: scale(0.98);
+  }
+}
+
+@keyframes lab-spiral-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes trust-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.trust-track {
+  animation: trust-marquee 40s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trust-track {
+    animation: none;
+  }
 }

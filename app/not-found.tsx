@@ -7,7 +7,7 @@ export default function NotFound() {
   const { copy } = useCopy();
   return (
     <NoticePage>
-      <h1 className="font-display text-4xl">{copy.notices.notFound}</h1>
+      <h1 className="font-display text-4xl leading-[1.05] text-balance sm:text-5xl">{copy.notices.notFound}</h1>
       <BackHome />
     </NoticePage>
   );

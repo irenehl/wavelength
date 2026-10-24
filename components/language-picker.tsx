@@ -27,10 +27,10 @@ export function LanguagePicker({
             aria-selected={selected}
             aria-label={`${primary}, ${secondary}`}
             onClick={() => onChange(language.code)}
-            className={`flex min-h-14 flex-col justify-center rounded-xl border px-3 py-2 text-left transition-colors ${
+            className={`flex min-h-14 flex-col justify-center rounded-2xl border px-4 py-2.5 text-left transition-colors ${
               selected
-                ? "border-primary bg-lavender text-foreground ring-1 ring-primary"
-                : "border-border bg-card text-foreground/80 hover:border-primary/60"
+                ? "border-purple bg-purple/12 text-foreground"
+                : "border-border bg-background text-foreground hover:bg-input/50"
             }`}
           >
             <span className="text-sm font-medium leading-5">{primary}</span>

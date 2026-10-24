@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Alan_Sans, DM_Sans } from "next/font/google";
 import Script from "next/script";
-import { SiteFooter } from "@/components/brand";
+import { SiteFooter, SiteNav } from "@/components/brand";
 import { LocaleProvider } from "@/components/locale";
 import "./globals.css";
 
@@ -27,13 +27,16 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="es" suppressHydrationWarning className={`${alanSans.variable} ${dmSans.variable} h-full antialiased`}>
+    <html lang="es" suppressHydrationWarning className={`${alanSans.variable} ${dmSans.variable} h-full scroll-smooth antialiased`}>
       <body className="min-h-dvh flex flex-col">
         <Script id="puente-locale" strategy="beforeInteractive">
           {`try{var s=localStorage.getItem("puente-locale");var n=s==="en"||s==="es"?s:(navigator.language||"").toLowerCase().indexOf("en")===0?"en":"es";document.documentElement.lang=n}catch(e){}`}
         </Script>
         <LocaleProvider>
-          <div className="flex flex-1 flex-col">{children}</div>
+          <SiteNav />
+          <div id="main" className="flex flex-1 flex-col">
+            {children}
+          </div>
           <SiteFooter />
         </LocaleProvider>
       </body>
