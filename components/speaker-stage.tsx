@@ -53,9 +53,15 @@ function SpeakerLive({
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
       });
-      capture.current = await startCapture(stream, (pcm) => socket.sendAudio(pcm), setLevel);
-      socket.announceMic(true);
-      setLive(true);
+      try {
+        await socket.announceMic(true);
+        capture.current = await startCapture(stream, (pcm) => socket.sendAudio(pcm), setLevel);
+        setLive(true);
+      } catch (error) {
+        for (const track of stream.getTracks()) track.stop();
+        void socket.announceMic(false);
+        throw error;
+      }
     } catch (error) {
       const name = error instanceof DOMException ? error.name : "";
       setMicError({ code: name === "NotAllowedError" ? "mic_blocked" : "mic_missing" });

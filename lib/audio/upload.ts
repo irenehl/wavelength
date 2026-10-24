@@ -1,38 +1,18 @@
 import { PCM_RATE } from "@/lib/audio/pcm"
 
-export const BYTES_PER_MS = (PCM_RATE * 2) / 1000
-const MIN_BATCH_MS = 160
-const MAX_BATCH_MS = 400
-const MAX_QUEUE_MS = 1500
-
-export function batchBytes(rttMs: number) {
-  const ms = Math.min(MAX_BATCH_MS, Math.max(MIN_BATCH_MS, Math.round(rttMs + 50)))
-  return Math.round(ms * BYTES_PER_MS)
-}
+const MAX_QUEUE_MS = 2000
+const MAX_QUEUE_BYTES = PCM_RATE * 2 * (MAX_QUEUE_MS / 1000)
 
 export function queueBytes(chunks: Uint8Array[]) {
   return chunks.reduce((total, chunk) => total + chunk.byteLength, 0)
 }
 
-export function trimQueue(chunks: Uint8Array[], maxBytes = Math.round(MAX_QUEUE_MS * BYTES_PER_MS)) {
+export function trimQueue(chunks: Uint8Array[], maxBytes = MAX_QUEUE_BYTES) {
   let total = queueBytes(chunks)
   while (total > maxBytes && chunks.length > 1) {
     total -= chunks[0]!.byteLength
     chunks.shift()
   }
-}
-
-export function takeBatch(chunks: Uint8Array[], size: number) {
-  if (chunks.length === 0) return null
-  const picked: Uint8Array[] = []
-  let total = 0
-  while (chunks.length && total < size) {
-    const next = chunks.shift()
-    if (!next) break
-    picked.push(next)
-    total += next.byteLength
-  }
-  return concatBytes(picked)
 }
 
 export function concatBytes(chunks: Uint8Array[]) {
@@ -43,4 +23,9 @@ export function concatBytes(chunks: Uint8Array[]) {
     offset += chunk.byteLength
   }
   return bytes
+}
+
+export function drainAll(chunks: Uint8Array[]) {
+  if (chunks.length === 0) return null
+  return concatBytes(chunks.splice(0, chunks.length))
 }

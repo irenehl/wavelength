@@ -102,7 +102,7 @@ export function openTranslation(options: {
       return
     }
 
-    if (event.type === "session.created" || event.type === "session.updated") {
+    if (event.type === "session.updated") {
       markReady()
       return
     }

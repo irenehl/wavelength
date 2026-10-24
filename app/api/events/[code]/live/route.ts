@@ -32,11 +32,7 @@ export async function GET(request: Request, context: { params: Promise<{ code: s
           send(`data: ${data}\n\n`)
           return
         }
-        const bytes = Buffer.from(data)
-        const frame = 2400
-        for (let offset = 0; offset < bytes.length; offset += frame) {
-          send(`data: ${JSON.stringify({ type: "audio", audio: bytes.subarray(offset, offset + frame).toString("base64") })}\n\n`)
-        }
+        send(`data: ${JSON.stringify({ type: "audio", audio: Buffer.from(data).toString("base64") })}\n\n`)
       })
       const heartbeat = setInterval(() => send(": keepalive\n\n"), 2000)
       heartbeat.unref?.()

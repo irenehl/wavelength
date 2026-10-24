@@ -1,24 +1,24 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { batchBytes, BYTES_PER_MS, takeBatch, trimQueue } from "./upload"
+import { drainAll, trimQueue } from "./upload"
 
-test("a slow round trip still ships enough audio to stay realtime", () => {
-  assert.equal(batchBytes(80), Math.round(160 * BYTES_PER_MS))
-  assert.equal(batchBytes(300), Math.round(350 * BYTES_PER_MS))
-  assert.equal(batchBytes(2000), Math.round(400 * BYTES_PER_MS))
+test("each post takes every sample waiting, in order", () => {
+  const queue = [new Uint8Array([1, 2]), new Uint8Array([3, 4])]
+  const first = drainAll(queue)
+  assert.deepEqual([...(first ?? [])], [1, 2, 3, 4])
+  assert.equal(queue.length, 0)
+
+  queue.push(new Uint8Array([5]))
+  queue.push(new Uint8Array([6]))
+  const second = drainAll(queue)
+  assert.deepEqual([...(second ?? [])], [5, 6])
 })
 
-test("takeBatch keeps leftover frames for the next post", () => {
-  const queue = [new Uint8Array(100), new Uint8Array(100), new Uint8Array(100)]
-  const first = takeBatch(queue, 150)
-  assert.equal(first?.byteLength, 200)
+test("a failed post can be put back without growing without limit", () => {
+  const queue = [new Uint8Array(100)]
+  const failed = new Uint8Array([7, 8])
+  queue.unshift(failed)
+  trimQueue(queue, 100)
   assert.equal(queue.length, 1)
   assert.equal(queue[0]?.byteLength, 100)
-})
-
-test("trimQueue drops the oldest audio when the speaker is too far behind", () => {
-  const queue = [new Uint8Array(100), new Uint8Array(40)]
-  trimQueue(queue, 50)
-  assert.equal(queue.length, 1)
-  assert.equal(queue[0]?.byteLength, 40)
 })

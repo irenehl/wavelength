@@ -47,8 +47,12 @@ function ListenerLive({
   const speakerLive = Boolean(room?.speakerPresent && room.micLive);
 
   async function start(next = language) {
-    await socket.player?.resume();
-    socket.player?.setVolume(volume);
+    try {
+      await socket.player?.resume();
+      socket.player?.setVolume(volume);
+    } catch {
+      // Captions still show if the phone blocks playback.
+    }
     socket.announceListen(next);
     setLanguage(next);
     setListening(true);
